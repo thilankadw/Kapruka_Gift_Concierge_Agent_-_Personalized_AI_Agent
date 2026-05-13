@@ -84,7 +84,7 @@ dev = [
 ]
 
 [tool.hatch.build.targets.wheel]
-packages = ["src"]
+packages = ["src", "notebooks"]
 
 # ── Tool Configuration ──────────────────────────────────────────────
 
