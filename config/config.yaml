@@ -94,6 +94,7 @@ crawling:
   max_depth: 3
   delay_seconds: 2.0
   max_pages: 100
+  max_saved_docs: 1000
 
 # ============================================================================
 # Paths (relative to project root)
@@ -101,7 +102,7 @@ crawling:
 paths:
   data_dir: data
   vector_dir: data/vectorstore
-  markdown_dir: data/nawaloka_markdown
+  markdown_dir: data/kapruka_markdown
   cache_dir: data/cag_cache
   logs_dir: logs
 
