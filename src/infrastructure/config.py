@@ -165,7 +165,7 @@ VECTOR_DIR = _PROJECT_ROOT / _get_nested(_PARAMS, "paths", "vector_dir", default
 
 # Alternative ingestion sources (used by pipeline.py loader map)
 JSONL_DIR = DATA_DIR / "jsonl"
-MARKDOWN_DIR = _PROJECT_ROOT / _get_nested(_PARAMS, "paths", "markdown_dir", default="data/nawaloka_markdown")
+MARKDOWN_DIR = _PROJECT_ROOT / _get_nested(_PARAMS, "paths", "markdown_dir", default="data/kapruka_markdown")
 CACHE_DIR = _PROJECT_ROOT / _get_nested(_PARAMS, "paths", "cache_dir", default="data/cag_cache")
 CRAWL_OUT_DIR = DATA_DIR
 
@@ -228,6 +228,7 @@ CRAG_EXPANDED_K = _get_nested(_PARAMS, "crag", "expanded_k", default=8)
 CRAWL_MAX_DEPTH = _get_nested(_PARAMS, "crawling", "max_depth", default=3)
 CRAWL_DELAY_SECONDS = _get_nested(_PARAMS, "crawling", "delay_seconds", default=2.0)
 CRAWL_MAX_PAGES = _get_nested(_PARAMS, "crawling", "max_pages", default=100)
+CRAWL_MAX_SAVED_DOCS = _get_nested(_PARAMS, "crawling", "max_saved_docs", default=1000)
 
 # ========================================
 # Memory Configuration (NOT in YAML - kept as constants)
