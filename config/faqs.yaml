@@ -1,0 +1,150 @@
+# =============================================================================
+# KAPRUKA GIFT CONCIERGE — KNOWN FAQs (Internal Knowledge Base)
+# =============================================================================
+# These FAQs are pre-loaded into the semantic CAG cache at agent startup.
+# Run `rag_tool.warm_cache(queries)` to generate + cache responses.
+#
+# Benefits:
+# - Instant responses for common questions (sub-1ms, $0)
+# - Semantic matching catches paraphrases (cosine ≥ 0.90)
+# - Cache stored in Qdrant (dedicated cag_cache collection, HNSW COSINE)
+# - Answers are hardcoded to ensure 100% accuracy and bypass LLM generation.
+# =============================================================================
+
+# Orders & Delivery
+delivery:
+  - query: "How long does Kapruka delivery take?"
+    answer: "Most Colombo deliveries are completed within 24 hours. Outstation deliveries typically take 1-3 business days depending on the destination and product type."
+
+  - query: "Does Kapruka provide same-day delivery?"
+    answer: "Yes. Same-day delivery is available for selected products and locations when orders are placed before the daily cutoff time."
+
+  - query: "Which areas does Kapruka deliver to?"
+    answer: "Kapruka delivers islandwide across Sri Lanka, including Colombo, Kandy, Galle, Jaffna, Kurunegala, and most major cities and towns."
+
+  - query: "Can gifts be delivered internationally?"
+    answer: "Yes. International gift ordering is supported for customers sending gifts to recipients in Sri Lanka."
+
+  - query: "How can I track my order?"
+    answer: "Customers can track their order status using the order tracking feature available on the Kapruka platform."
+
+  - query: "What happens if the recipient is unavailable during delivery?"
+    answer: "Delivery staff will attempt to contact the recipient. Depending on the situation, the order may be rescheduled or handed over to an authorized person."
+
+# Cakes & Food Gifts
+cakes:
+  - query: "Are cakes delivered fresh?"
+    answer: "Yes. Cakes are prepared fresh and delivered on the requested delivery date whenever possible."
+
+  - query: "Can I customize birthday cakes?"
+    answer: "Yes. Selected cakes support custom messages, names, and design modifications."
+
+  - query: "Are eggless cakes available?"
+    answer: "Yes. Kapruka offers selected eggless cake options for dietary preferences."
+
+  - query: "Can I order cakes for midnight delivery?"
+    answer: "Midnight delivery is available for selected cake products and delivery locations."
+
+  - query: "Do cakes contain allergens?"
+    answer: "Some cakes may contain allergens such as nuts, dairy, gluten, or eggs. Customers should review product descriptions carefully before ordering."
+
+# Payments
+payments:
+  - query: "What payment methods are accepted?"
+    answer: "Kapruka accepts Visa, Mastercard, American Express, online banking, and selected digital payment methods."
+
+  - query: "Can I pay using foreign cards?"
+    answer: "Yes. International debit and credit cards are supported for overseas customers."
+
+  - query: "Is cash on delivery available?"
+    answer: "Cash on delivery availability depends on the product category and delivery location."
+
+  - query: "Are online payments secure?"
+    answer: "Yes. Payments are processed through secure payment gateways using encrypted transactions."
+
+# Gift Recommendations
+recommendations:
+  - query: "What are popular birthday gift categories?"
+    answer: "Popular birthday gifts include cakes, flower bouquets, chocolate hampers, perfumes, teddy bears, and personalized gift sets."
+
+  - query: "What gifts are suitable for anniversaries?"
+    answer: "Common anniversary gifts include roses, romantic hampers, perfumes, jewelry, and customized keepsakes."
+
+  - query: "What gifts are suitable for corporate events?"
+    answer: "Corporate gifts include branded hampers, gourmet baskets, desk accessories, flowers, and appreciation gift packs."
+
+  - query: "Can the system recommend gifts based on preferences?"
+    answer: "Yes. The Kapruka Gift Concierge Agent uses semantic memory and preference matching to generate personalized recommendations."
+
+  - query: "How does the recommendation system avoid unsuitable gifts?"
+    answer: "The reflection system checks allergies, dislikes, delivery restrictions, and user preferences before finalizing recommendations."
+
+# Product Availability
+products:
+  - query: "What happens if a product is out of stock?"
+    answer: "If a product becomes unavailable, customers may receive a replacement recommendation or order rescheduling option."
+
+  - query: "Are product prices updated regularly?"
+    answer: "Yes. Product prices and availability are updated based on the latest catalog information."
+
+  - query: "Can products be pre-ordered?"
+    answer: "Selected products support advance ordering for birthdays, anniversaries, and special occasions."
+
+  - query: "Do all products support islandwide delivery?"
+    answer: "No. Some fragile or perishable products may have location-based delivery limitations."
+
+# User Preferences & Personalization
+preferences:
+  - query: "How does the system remember user preferences?"
+    answer: "The system stores semantic memory facts such as favorite gift types, allergies, budget ranges, and preferred categories in the memory database."
+
+  - query: "Can users update their preferences?"
+    answer: "Yes. Users can update preferences by chatting naturally with the assistant."
+
+  - query: "Does the system remember previous gift searches?"
+    answer: "Yes. Previous interactions can be summarized and stored as episodic memory to improve future recommendations."
+
+  - query: "Can the assistant avoid allergy-related products?"
+    answer: "Yes. The recommendation workflow filters products using stored allergy facts before generating recommendations."
+
+# Logistics & Delivery Validation
+logistics:
+  - query: "How does delivery validation work?"
+    answer: "The logistics system validates product availability, delivery location, delivery time constraints, and product restrictions before confirming recommendations."
+
+  - query: "Can fragile gifts be delivered outside Colombo?"
+    answer: "Some fragile products may have delivery restrictions depending on the destination and transport conditions."
+
+  - query: "What happens during bad weather conditions?"
+    answer: "Extreme weather conditions may cause delivery delays or temporary suspension of selected delivery routes."
+
+  - query: "Can users schedule future deliveries?"
+    answer: "Yes. Users can select future delivery dates for birthdays, anniversaries, and special occasions."
+
+# Privacy & Security
+privacy:
+  - query: "How is user data stored?"
+    answer: "User preferences and memory facts are securely stored in the Supabase PostgreSQL memory database."
+
+  - query: "Does the assistant store payment details?"
+    answer: "No. Sensitive payment information is handled securely by payment gateways and is not stored in the assistant memory system."
+
+  - query: "Are conversations private?"
+    answer: "Yes. User conversations and stored memory facts are protected using access-controlled database policies."
+
+# AI Agent & Memory System
+agent:
+  - query: "How does the Kapruka Gift Concierge Agent work?"
+    answer: "The agent combines semantic memory, episodic memory, procedural workflows, and RAG retrieval over the Kapruka product catalog to provide personalized gift recommendations."
+
+  - query: "What is semantic memory in the gift concierge system?"
+    answer: "Semantic memory stores persistent user facts such as preferences, allergies, favorite categories, and budget information."
+
+  - query: "What is episodic memory in the system?"
+    answer: "Episodic memory stores summaries of previous user interactions and gift recommendation sessions."
+
+  - query: "Why are products stored in Qdrant?"
+    answer: "Product embeddings are stored in Qdrant to support semantic RAG retrieval and meaning-based product search."
+
+  - query: "What is the reflection loop?"
+    answer: "The reflection loop validates recommendations for safety, relevance, delivery feasibility, and preference alignment before returning final suggestions."
