@@ -68,6 +68,12 @@ dependencies = [
     "loguru>=0.7.0",
 ]
 
+[project.scripts]
+init-supabase = "scripts.init_supabase:main"
+test-supabase = "scripts.test_supabase:main"
+seed-crm = "scripts.seed_crm_unified:main"
+rebuild-cag-cache = "scripts.rebuild_cag_cache:main"
+
 [project.optional-dependencies]
 jupyter = [
     "jupyter>=1.0.0",
@@ -84,7 +90,10 @@ dev = [
 ]
 
 [tool.hatch.build.targets.wheel]
-packages = ["src", "notebooks"]
+packages = ["src/agents", "src/infrastructure", "src/services", "scripts"]
+
+[tool.hatch.build.targets.wheel.sources]
+src = ""
 
 # ── Tool Configuration ──────────────────────────────────────────────
 
