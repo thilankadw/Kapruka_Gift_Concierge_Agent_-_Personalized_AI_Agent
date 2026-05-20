@@ -43,7 +43,7 @@ ON st_turns (ttl_at)
 WHERE ttl_at IS NOT NULL;
 
 COMMENT ON TABLE st_turns IS 'Short-term conversation memory for Kapruka agent sessions';
-COMMENT ON COLUMN st_turns.user_id IS 'Application user identifier linked to CRM users.external_user_id or users.user_id';
+COMMENT ON COLUMN st_turns.user_id IS 'Canonical CRM user identifier linked to users.user_id';
 COMMENT ON COLUMN st_turns.session_id IS 'Conversation session identifier';
 COMMENT ON COLUMN st_turns.ttl_at IS 'Optional expiry time for short-term memory cleanup';
 
@@ -335,6 +335,54 @@ COMMENT ON TABLE users IS 'Kapruka CRM user profiles. Preferences are stored in 
 COMMENT ON COLUMN users.external_user_id IS 'External chat or application identifier if available';
 COMMENT ON COLUMN users.district IS 'Default Sri Lankan delivery district or user location';
 COMMENT ON COLUMN users.notes IS 'Optional CRM notes. Durable preferences should be saved in mem_facts';
+
+-- ============================================================================
+-- FOREIGN KEY RELATIONSHIPS
+-- Canonical user-owned memory tables reference users.user_id.
+-- mem_procedures is intentionally excluded because it is shared system memory.
+-- ============================================================================
+
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1
+        FROM pg_constraint
+        WHERE conname = 'fk_st_turns_user_id__users'
+    ) THEN
+        ALTER TABLE st_turns
+        ADD CONSTRAINT fk_st_turns_user_id__users
+        FOREIGN KEY (user_id)
+        REFERENCES users(user_id)
+        ON UPDATE CASCADE
+        ON DELETE CASCADE;
+    END IF;
+
+    IF NOT EXISTS (
+        SELECT 1
+        FROM pg_constraint
+        WHERE conname = 'fk_mem_facts_user_id__users'
+    ) THEN
+        ALTER TABLE mem_facts
+        ADD CONSTRAINT fk_mem_facts_user_id__users
+        FOREIGN KEY (user_id)
+        REFERENCES users(user_id)
+        ON UPDATE CASCADE
+        ON DELETE CASCADE;
+    END IF;
+
+    IF NOT EXISTS (
+        SELECT 1
+        FROM pg_constraint
+        WHERE conname = 'fk_mem_episodes_user_id__users'
+    ) THEN
+        ALTER TABLE mem_episodes
+        ADD CONSTRAINT fk_mem_episodes_user_id__users
+        FOREIGN KEY (user_id)
+        REFERENCES users(user_id)
+        ON UPDATE CASCADE
+        ON DELETE CASCADE;
+    END IF;
+END $$;
 
 -- ============================================================================
 -- NOTE: PRODUCT CATALOG STORAGE

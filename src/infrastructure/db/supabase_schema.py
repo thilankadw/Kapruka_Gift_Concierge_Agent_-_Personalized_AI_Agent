@@ -312,6 +312,54 @@ ON users(district);
 COMMENT ON TABLE users IS 'Minimal Kapruka CRM user profiles. Preferences live in mem_facts.';
 
 -- ============================================================================
+-- FOREIGN KEY RELATIONSHIPS
+-- Canonical user-owned memory tables reference users.user_id.
+-- mem_procedures is intentionally excluded because it is shared system memory.
+-- ============================================================================
+
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1
+        FROM pg_constraint
+        WHERE conname = 'fk_st_turns_user_id__users'
+    ) THEN
+        ALTER TABLE st_turns
+        ADD CONSTRAINT fk_st_turns_user_id__users
+        FOREIGN KEY (user_id)
+        REFERENCES users(user_id)
+        ON UPDATE CASCADE
+        ON DELETE CASCADE;
+    END IF;
+
+    IF NOT EXISTS (
+        SELECT 1
+        FROM pg_constraint
+        WHERE conname = 'fk_mem_facts_user_id__users'
+    ) THEN
+        ALTER TABLE mem_facts
+        ADD CONSTRAINT fk_mem_facts_user_id__users
+        FOREIGN KEY (user_id)
+        REFERENCES users(user_id)
+        ON UPDATE CASCADE
+        ON DELETE CASCADE;
+    END IF;
+
+    IF NOT EXISTS (
+        SELECT 1
+        FROM pg_constraint
+        WHERE conname = 'fk_mem_episodes_user_id__users'
+    ) THEN
+        ALTER TABLE mem_episodes
+        ADD CONSTRAINT fk_mem_episodes_user_id__users
+        FOREIGN KEY (user_id)
+        REFERENCES users(user_id)
+        ON UPDATE CASCADE
+        ON DELETE CASCADE;
+    END IF;
+END $$;
+
+-- ============================================================================
 -- ROW LEVEL SECURITY
 -- ============================================================================
 
