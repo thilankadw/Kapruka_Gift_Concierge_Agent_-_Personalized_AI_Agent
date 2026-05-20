@@ -29,7 +29,7 @@ llm:
 # ============================================================================
 embedding:
   # Model tier: "default" or "small"
-  tier: default
+  tier: small
   batch_size: 100
   show_progress: false
 
