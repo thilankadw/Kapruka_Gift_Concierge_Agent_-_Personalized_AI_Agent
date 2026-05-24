@@ -164,7 +164,7 @@ KB_DIR = _PROJECT_ROOT / _get_nested(_PARAMS, "paths", "kb_dir", default="data/k
 VECTOR_DIR = _PROJECT_ROOT / _get_nested(_PARAMS, "paths", "vector_dir", default="data/vectorstore")
 
 # Alternative ingestion sources (used by pipeline.py loader map)
-JSONL_DIR = DATA_DIR / "jsonl"
+JSONL_DIR = DATA_DIR
 MARKDOWN_DIR = _PROJECT_ROOT / _get_nested(_PARAMS, "paths", "markdown_dir", default="data/kapruka_markdown")
 CACHE_DIR = _PROJECT_ROOT / _get_nested(_PARAMS, "paths", "cache_dir", default="data/cag_cache")
 CRAWL_OUT_DIR = DATA_DIR
