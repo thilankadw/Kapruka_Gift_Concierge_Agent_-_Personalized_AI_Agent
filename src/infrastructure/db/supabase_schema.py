@@ -292,10 +292,32 @@ CREATE TABLE IF NOT EXISTS users (
     email TEXT,
     district TEXT,
     notes TEXT,
-    active INTEGER NOT NULL DEFAULT 1,
+    active BOOLEAN NOT NULL DEFAULT TRUE,
     created_at INTEGER NOT NULL,
     updated_at INTEGER NOT NULL
 );
+
+DO $$
+BEGIN
+    IF EXISTS (
+        SELECT 1
+        FROM information_schema.columns
+        WHERE table_schema = 'public'
+          AND table_name = 'users'
+          AND column_name = 'active'
+          AND data_type <> 'boolean'
+    ) THEN
+        ALTER TABLE users
+        ALTER COLUMN active DROP DEFAULT;
+
+        ALTER TABLE users
+        ALTER COLUMN active TYPE BOOLEAN
+        USING (active <> 0);
+
+        ALTER TABLE users
+        ALTER COLUMN active SET DEFAULT TRUE;
+    END IF;
+END $$;
 
 CREATE INDEX IF NOT EXISTS idx_users_external_user_id
 ON users(external_user_id);

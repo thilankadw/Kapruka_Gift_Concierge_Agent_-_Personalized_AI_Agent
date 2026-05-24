@@ -108,7 +108,7 @@ class CRMDatabaseClient:
         email: Optional[str] = None,
         district: Optional[str] = None,
         notes: Optional[str] = None,
-        active: int = 1,
+        active: bool = True,
     ) -> Optional[Dict]:
         """
         Create a new Kapruka CRM user profile.
@@ -125,7 +125,7 @@ class CRMDatabaseClient:
             email: Optional email address
             district: Optional Sri Lankan delivery district
             notes: Optional CRM notes
-            active: 1 for active user, 0 for inactive user
+            active: True for active user, False for inactive user
 
         Returns:
             Created user profile dictionary or None on failure
@@ -184,7 +184,7 @@ class CRMDatabaseClient:
         email: Optional[str] = None,
         district: Optional[str] = None,
         notes: Optional[str] = None,
-        active: Optional[int] = None,
+        active: Optional[bool] = None,
     ) -> Optional[Dict]:
         """
         Update basic CRM profile fields for a Kapruka user.
@@ -261,7 +261,7 @@ class CRMDatabaseClient:
         email: Optional[str] = None,
         district: Optional[str] = None,
         notes: Optional[str] = None,
-        active: int = 1,
+        active: bool = True,
     ) -> Optional[Dict]:
         """
         Create or update a Kapruka CRM user profile.
@@ -326,7 +326,7 @@ class CRMDatabaseClient:
             query = session.query(User).order_by(User.updated_at.desc())
 
             if active_only:
-                query = query.filter(User.active == 1)
+                query = query.filter(User.active.is_(True))
 
             users = query.limit(limit).all()
             return [user.to_dict() for user in users]
@@ -350,7 +350,7 @@ class CRMDatabaseClient:
         """
         updated = self.update_user_profile(
             external_user_id=external_user_id,
-            active=0,
+            active=False,
         )
         return updated is not None
 

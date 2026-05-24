@@ -314,10 +314,32 @@ CREATE TABLE IF NOT EXISTS users (
     phone TEXT,
     district TEXT,
     notes TEXT,
-    active INTEGER NOT NULL DEFAULT 1,
+    active BOOLEAN NOT NULL DEFAULT TRUE,
     created_at INTEGER NOT NULL,
     updated_at INTEGER NOT NULL
 );
+
+DO $$
+BEGIN
+    IF EXISTS (
+        SELECT 1
+        FROM information_schema.columns
+        WHERE table_schema = 'public'
+          AND table_name = 'users'
+          AND column_name = 'active'
+          AND data_type <> 'boolean'
+    ) THEN
+        ALTER TABLE users
+        ALTER COLUMN active DROP DEFAULT;
+
+        ALTER TABLE users
+        ALTER COLUMN active TYPE BOOLEAN
+        USING (active <> 0);
+
+        ALTER TABLE users
+        ALTER COLUMN active SET DEFAULT TRUE;
+    END IF;
+END $$;
 
 CREATE INDEX IF NOT EXISTS idx_users_external_user_id
 ON users(external_user_id);
@@ -489,7 +511,7 @@ SELECT
 FROM users u
 LEFT JOIN v_active_facts f ON u.user_id = f.user_id
 LEFT JOIN v_episode_stats e ON u.user_id = e.user_id
-WHERE u.active = 1;
+WHERE u.active = TRUE;
 
 COMMENT ON VIEW v_active_facts IS 'Summary of active semantic facts per Kapruka user';
 COMMENT ON VIEW v_episode_stats IS 'Summary of episodic memory per Kapruka user';
