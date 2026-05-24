@@ -6,7 +6,7 @@ Matches the schema defined in sql/crm_schema.sql.
 
 import time
 
-from sqlalchemy import Column, Integer, String, Text
+from sqlalchemy import Boolean, Column, Integer, String, Text
 from sqlalchemy.ext.declarative import declarative_base
 
 
@@ -43,7 +43,7 @@ class User(Base):
     # General CRM notes only. Long-term preference facts go to mem_facts.
     notes = Column(Text)
 
-    active = Column(Integer, nullable=False, default=1)
+    active = Column(Boolean, nullable=False, default=True)
     created_at = Column(Integer, default=lambda: int(time.time()))
     updated_at = Column(
         Integer,

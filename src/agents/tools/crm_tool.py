@@ -54,9 +54,9 @@ class CRMTool:
         return int(time.time())
 
     @staticmethod
-    def _format_active(active: Optional[int]) -> str:
+    def _format_active(active: Optional[bool]) -> str:
         """Format active flag for display."""
-        return "Active" if active == 1 else "Inactive"
+        return "Active" if active is True else "Inactive"
 
     @staticmethod
     def _safe(value: Optional[str]) -> str:
@@ -196,7 +196,7 @@ class CRMTool:
                 phone=phone,
                 email=email,
                 district=district,
-                active=1,
+                active=True,
                 created_at=now,
                 updated_at=now,
             )
@@ -235,7 +235,7 @@ class CRMTool:
         email: Optional[str] = None,
         district: Optional[str] = None,
         notes: Optional[str] = None,
-        active: Optional[int] = None,
+        active: Optional[bool] = None,
     ) -> str:
         """
         Update stable CRM fields for a Kapruka user.
@@ -251,7 +251,7 @@ class CRMTool:
             email: Optional updated email
             district: Optional updated district
             notes: Optional CRM notes
-            active: Optional active flag, 1 or 0
+            active: Optional active flag, True or False
 
         Returns:
             Updated profile summary or error message.
@@ -283,8 +283,12 @@ class CRMTool:
                 user.district = district
                 changed.append("district")
             if active is not None:
-                if active not in (0, 1):
-                    return "Invalid active value. Use 1 for active or 0 for inactive."
+                if isinstance(active, int):
+                    if active not in (0, 1):
+                        return "Invalid active value. Use true or false."
+                    active = bool(active)
+                elif not isinstance(active, bool):
+                    return "Invalid active value. Use true or false."
                 user.active = active
                 changed.append("active")
             if notes is not None and hasattr(user, "notes"):
@@ -335,7 +339,7 @@ class CRMTool:
         return self.update_user(
             user_id=user_id,
             external_user_id=external_user_id,
-            active=0,
+            active=False,
         )
 
     # ── 5. list_users ─────────────────────────────────────────
@@ -362,7 +366,7 @@ class CRMTool:
             query = session.query(User)
 
             if active_only:
-                query = query.filter(User.active == 1)
+                query = query.filter(User.active.is_(True))
             if district:
                 query = query.filter(User.district.ilike(f"%{district}%"))
 

@@ -292,10 +292,32 @@ CREATE TABLE IF NOT EXISTS users (
     email TEXT,
     district TEXT,
     notes TEXT,
-    active INTEGER NOT NULL DEFAULT 1,
+    active BOOLEAN NOT NULL DEFAULT TRUE,
     created_at INTEGER NOT NULL,
     updated_at INTEGER NOT NULL
 );
+
+DO $$
+BEGIN
+    IF EXISTS (
+        SELECT 1
+        FROM information_schema.columns
+        WHERE table_schema = 'public'
+          AND table_name = 'users'
+          AND column_name = 'active'
+          AND data_type <> 'boolean'
+    ) THEN
+        ALTER TABLE users
+        ALTER COLUMN active DROP DEFAULT;
+
+        ALTER TABLE users
+        ALTER COLUMN active TYPE BOOLEAN
+        USING (active <> 0);
+
+        ALTER TABLE users
+        ALTER COLUMN active SET DEFAULT TRUE;
+    END IF;
+END $$;
 
 CREATE INDEX IF NOT EXISTS idx_users_external_user_id
 ON users(external_user_id);
@@ -310,6 +332,54 @@ CREATE INDEX IF NOT EXISTS idx_users_district
 ON users(district);
 
 COMMENT ON TABLE users IS 'Minimal Kapruka CRM user profiles. Preferences live in mem_facts.';
+
+-- ============================================================================
+-- FOREIGN KEY RELATIONSHIPS
+-- Canonical user-owned memory tables reference users.user_id.
+-- mem_procedures is intentionally excluded because it is shared system memory.
+-- ============================================================================
+
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1
+        FROM pg_constraint
+        WHERE conname = 'fk_st_turns_user_id__users'
+    ) THEN
+        ALTER TABLE st_turns
+        ADD CONSTRAINT fk_st_turns_user_id__users
+        FOREIGN KEY (user_id)
+        REFERENCES users(user_id)
+        ON UPDATE CASCADE
+        ON DELETE CASCADE;
+    END IF;
+
+    IF NOT EXISTS (
+        SELECT 1
+        FROM pg_constraint
+        WHERE conname = 'fk_mem_facts_user_id__users'
+    ) THEN
+        ALTER TABLE mem_facts
+        ADD CONSTRAINT fk_mem_facts_user_id__users
+        FOREIGN KEY (user_id)
+        REFERENCES users(user_id)
+        ON UPDATE CASCADE
+        ON DELETE CASCADE;
+    END IF;
+
+    IF NOT EXISTS (
+        SELECT 1
+        FROM pg_constraint
+        WHERE conname = 'fk_mem_episodes_user_id__users'
+    ) THEN
+        ALTER TABLE mem_episodes
+        ADD CONSTRAINT fk_mem_episodes_user_id__users
+        FOREIGN KEY (user_id)
+        REFERENCES users(user_id)
+        ON UPDATE CASCADE
+        ON DELETE CASCADE;
+    END IF;
+END $$;
 
 -- ============================================================================
 -- ROW LEVEL SECURITY
