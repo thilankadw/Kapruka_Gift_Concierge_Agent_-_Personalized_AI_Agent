@@ -1,50 +1,46 @@
-"""
-Memory system — schemas, policies, prompts, stores, and operations.
+"""Public memory exports with lazy loading.
 
-Memory types:
-  - Short-term: Recent conversation turns (Supabase)
-  - Semantic (Long-term): Distilled facts with embeddings (Supabase pgvector)
-  - Episodic (Long-term): Full conversation sessions with summaries (Supabase)
-  - Procedural: Step-by-step workflows and procedures (Supabase)
+Importing ``memory`` should not eagerly open Supabase-backed stores during test
+collection or when only the schema types are needed.
 """
 
-from .schemas import (
-    ConversationTurn,
-    MemoryFact,
-    ReminderIntent,
-    Episode,
-    Procedure,
-    ShortTermStore,
-    LongTermStore,
-    Embedder,
-    Clock,
-)
-from .st_store import ShortTermMemoryStore
-from .lt_store import LongTermMemoryStore
-from .episodic_store import EpisodicMemoryStore, create_episode_from_turns
-from .procedural_store import ProceduralMemoryStore
-from .memory_ops import MemoryDistiller, MemoryRecaller, MemoryForgetService
+from importlib import import_module
 
-__all__ = [
-    # Schemas
-    "ConversationTurn",
-    "MemoryFact",
-    "ReminderIntent",
-    "Episode",
-    "Procedure",
-    # Protocols
-    "ShortTermStore",
-    "LongTermStore",
-    "Embedder",
-    "Clock",
-    # Stores
-    "ShortTermMemoryStore",
-    "LongTermMemoryStore",
-    "EpisodicMemoryStore",
-    "ProceduralMemoryStore",
-    "create_episode_from_turns",
-    # Operations
-    "MemoryDistiller",
-    "MemoryRecaller",
-    "MemoryForgetService",
-]
+
+_EXPORTS = {
+    "ConversationTurn": (".schemas", "ConversationTurn"),
+    "MemoryFact": (".schemas", "MemoryFact"),
+    "ReminderIntent": (".schemas", "ReminderIntent"),
+    "Episode": (".schemas", "Episode"),
+    "Procedure": (".schemas", "Procedure"),
+    "ShortTermStore": (".schemas", "ShortTermStore"),
+    "LongTermStore": (".schemas", "LongTermStore"),
+    "Embedder": (".schemas", "Embedder"),
+    "Clock": (".schemas", "Clock"),
+    "ShortTermMemoryStore": (".st_store", "ShortTermMemoryStore"),
+    "LongTermMemoryStore": (".lt_store", "LongTermMemoryStore"),
+    "EpisodicMemoryStore": (".episodic_store", "EpisodicMemoryStore"),
+    "create_episode_from_turns": (".episodic_store", "create_episode_from_turns"),
+    "ProceduralMemoryStore": (".procedural_store", "ProceduralMemoryStore"),
+    "MemoryDistiller": (".memory_ops", "MemoryDistiller"),
+    "MemoryRecaller": (".memory_ops", "MemoryRecaller"),
+    "MemoryForgetService": (".memory_ops", "MemoryForgetService"),
+}
+
+
+__all__ = list(_EXPORTS)
+
+
+def __getattr__(name: str):
+    if name not in _EXPORTS:
+        raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
+
+    module_name, attr_name = _EXPORTS[name]
+    module = import_module(module_name, __name__)
+    value = getattr(module, attr_name)
+    globals()[name] = value
+    return value
+
+
+def __dir__():
+    return sorted(set(globals()) | set(__all__))

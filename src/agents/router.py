@@ -21,15 +21,68 @@ VALID_ROUTES = {"crm", "rag", "web_search", "direct"}
 
 # Valid CRM sub-actions
 VALID_CRM_ACTIONS = {
-    "lookup_patient",
-    "search_doctors",
-    "create_booking",
-    "cancel_booking",
-    "reschedule_booking",
+    "lookup_user",
+    "create_user",
+    "update_user",
+    "deactivate_user",
+    "list_users",
+    "get_delivery_zone",
+    "list_delivery_slots",
+    "search_couriers",
+    "get_product_delivery_rule",
+    "lookup_delivery_history",
+    "check_delivery_coverage",
 }
 
 # Maximum routes per query (safety cap)
 MAX_ROUTES = 3
+
+SRI_LANKAN_DISTRICTS = (
+    "ampara",
+    "anuradhapura",
+    "badulla",
+    "batticaloa",
+    "colombo",
+    "galle",
+    "gampaha",
+    "hambantota",
+    "jaffna",
+    "kalutara",
+    "kandy",
+    "kegalle",
+    "kilinochchi",
+    "kurunegala",
+    "mannar",
+    "matale",
+    "matara",
+    "monaragala",
+    "mullaitivu",
+    "nuwara eliya",
+    "polonnaruwa",
+    "puttalam",
+    "ratnapura",
+    "trincomalee",
+    "vavuniya",
+)
+
+LOGISTICS_PRODUCT_TYPES = (
+    "cake",
+    "flowers",
+    "flower",
+    "chocolates",
+    "chocolate",
+    "perfume",
+    "gift hamper",
+    "gift_hamper",
+    "electronics",
+    "gift voucher",
+    "gift_voucher",
+    "jewellery",
+    "plants",
+    "plant",
+    "books",
+    "book",
+)
 
 
 @dataclass
@@ -156,7 +209,8 @@ class QueryRouter:
                 )
             ])
 
-        return self._parse_response(content)
+        parsed = self._parse_response(content)
+        return self._postprocess_decisions(user_message, parsed)
 
     def _model_name(self) -> str:
         """Extract model name from the LLM for LangFuse metadata."""
@@ -231,9 +285,9 @@ class QueryRouter:
             action = rd.get("action")
             if route == "crm" and action not in VALID_CRM_ACTIONS:
                 logger.warning(
-                    "Invalid CRM action '{}'; defaulting to lookup_patient.", action
+                    "Invalid CRM action '{}'; defaulting to lookup_user.", action
                 )
-                action = "lookup_patient"
+                action = "lookup_user"
 
             decisions.append(RouteDecision(
                 route=route,
@@ -249,3 +303,157 @@ class QueryRouter:
                                        reasoning="No valid routes parsed.")]
 
         return MultiRouteDecision(decisions=decisions)
+
+    def _postprocess_decisions(
+        self,
+        user_message: str,
+        decision_set: MultiRouteDecision,
+    ) -> MultiRouteDecision:
+        """
+        Recover common logistics-feasibility misroutes after LLM parsing.
+
+        The logistics flow is backed by CRM/logistics tables, so delivery
+        feasibility requests should not fall through to web_search or to the
+        default lookup_user CRM action.
+        """
+        if not decision_set.decisions:
+            return decision_set
+
+        logistics_query = self._looks_like_logistics_query(user_message)
+        live_external_query = self._looks_like_live_external_logistics_query(user_message)
+        inferred_params = self._infer_logistics_params(user_message)
+        inferred_action = self._infer_logistics_action(user_message)
+
+        updated: List[RouteDecision] = []
+        for decision in decision_set.decisions:
+            route = decision.route
+            action = decision.action
+            params = dict(decision.params or {})
+
+            if logistics_query and (route in {"direct", "web_search"}):
+                # Keep live disruption queries on web_search; otherwise route to
+                # the structured logistics flow when we have enough parameters.
+                if not live_external_query and inferred_params.get("district"):
+                    route = "crm"
+                    action = inferred_action
+                    params = {**inferred_params, **params}
+
+            if route == "crm" and logistics_query:
+                if action not in VALID_CRM_ACTIONS or action == "lookup_user":
+                    action = inferred_action
+                params = {**inferred_params, **params}
+                params.pop("query", None)
+
+            updated.append(
+                RouteDecision(
+                    route=route,
+                    confidence=decision.confidence,
+                    reasoning=decision.reasoning,
+                    action=action if route == "crm" else None,
+                    params=params,
+                )
+            )
+
+        return MultiRouteDecision(decisions=updated)
+
+    @staticmethod
+    def _looks_like_logistics_query(user_message: str) -> bool:
+        message = user_message.lower()
+        logistics_keywords = (
+            "delivery",
+            "deliver",
+            "same-day",
+            "same day",
+            "express",
+            "coverage",
+            "feasible",
+            "feasibility",
+            "courier",
+            "slot",
+            "district",
+            "arrival",
+        )
+        return any(keyword in message for keyword in logistics_keywords)
+
+    @staticmethod
+    def _looks_like_live_external_logistics_query(user_message: str) -> bool:
+        message = user_message.lower()
+        external_keywords = (
+            "weather",
+            "rain",
+            "storm",
+            "flood",
+            "traffic",
+            "road",
+            "closure",
+            "closed",
+            "accident",
+            "strike",
+            "public announcement",
+            "news",
+        )
+        return any(keyword in message for keyword in external_keywords)
+
+    def _infer_logistics_action(self, user_message: str) -> str:
+        message = user_message.lower()
+        if any(keyword in message for keyword in ("history", "past deliveries", "delivery history")):
+            return "lookup_delivery_history"
+        if "courier" in message:
+            return "search_couriers"
+        if any(keyword in message for keyword in ("rule", "fragile", "temperature", "distance")):
+            return "get_product_delivery_rule"
+        if any(keyword in message for keyword in ("slot", "timeslot", "time slot")):
+            return "list_delivery_slots"
+        if any(keyword in message for keyword in ("coverage", "same-day", "same day", "feasible", "feasibility", "available")):
+            return "check_delivery_coverage"
+        return "get_delivery_zone"
+
+    def _infer_logistics_params(self, user_message: str) -> Dict[str, Any]:
+        message = user_message.lower()
+        params: Dict[str, Any] = {}
+
+        district = next(
+            (
+                name.title()
+                for name in SRI_LANKAN_DISTRICTS
+                if name in message
+            ),
+            None,
+        )
+        if district:
+            params["district"] = district
+
+        product_type = next(
+            (
+                name.replace(" ", "_")
+                for name in LOGISTICS_PRODUCT_TYPES
+                if name in message
+            ),
+            None,
+        )
+        if product_type:
+            normalised = product_type
+            if normalised in {"flower"}:
+                normalised = "flowers"
+            elif normalised in {"chocolate"}:
+                normalised = "chocolates"
+            elif normalised in {"plant"}:
+                normalised = "plants"
+            elif normalised in {"book"}:
+                normalised = "books"
+            params["product_type"] = normalised
+
+        if "available" in message or "availability" in message:
+            params["available_only"] = True
+
+        slot_hint = None
+        if "morning" in message:
+            slot_hint = "morning"
+        elif "afternoon" in message:
+            slot_hint = "afternoon"
+        elif "evening" in message:
+            slot_hint = "evening"
+        if slot_hint:
+            params["slot"] = slot_hint
+
+        return params

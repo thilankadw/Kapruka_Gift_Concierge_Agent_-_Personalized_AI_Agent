@@ -1,21 +1,22 @@
 """
-Unified Kapruka CRM Data Seeder.
+Unified Kapruka CRM + logistics data seeder.
 
-This script seeds only the CRM tables needed by the Kapruka Gift Agent.
+This script seeds:
+- CRM users
+- delivery_zones
+- delivery_slots
+- courier_profiles
+- product_delivery_rules
+- delivery_history
+
 The reusable memory system is kept separate:
-- st_turns stores short-term chat turns.
-- mem_facts stores semantic user preference facts.
-- mem_episodes stores summarized past interactions.
-- mem_procedures stores reusable agent workflows.
+- st_turns stores short-term chat turns
+- mem_facts stores semantic user preference facts
+- mem_episodes stores summarized past interactions
+- mem_procedures stores reusable agent workflows
 
 The Kapruka product catalog is not seeded here because product metadata is
 vectorized and stored in Qdrant for RAG retrieval.
-
-Features:
-- SQL-first seeding if pre-exported SQL files exist.
-- Fallback to LLM or template generation when SQL files are absent.
-- Switch between database and JSONL storage.
-- Configurable user scale and deterministic random seed.
 """
 
 import argparse
@@ -31,64 +32,47 @@ from typing import Dict, List, Optional
 
 from dotenv import load_dotenv
 from loguru import logger
-from sqlalchemy import text
+from sqlalchemy import inspect, text
 from sqlalchemy.orm import sessionmaker
 
 load_dotenv()
 
-# Add src to path when this file is run from scripts/
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 
 from infrastructure.log import setup_logging
-from infrastructure.observability import observe, flush
+from infrastructure.observability import flush, observe
 
-
-# ============================================================================
-# CONFIGURATION ENUMS
-# ============================================================================
 
 class DataGenerationMode(Enum):
-    """Data generation mode."""
+    """Data generation mode for user records."""
+
     LLM = "llm"
     TEMPLATE = "template"
 
 
 class StorageBackend(Enum):
     """Storage backend for CRM seed data."""
+
     DATABASE = "database"
     JSONL = "jsonl"
 
 
-# ============================================================================
-# CONFIGURATION DATACLASS
-# ============================================================================
-
 @dataclass
 class CRMSeederConfig:
-    """Configuration for the Kapruka CRM seeder."""
+    """Configuration for the Kapruka CRM/logistics seeder."""
 
     generation_mode: DataGenerationMode = DataGenerationMode.LLM
     storage_backend: StorageBackend = StorageBackend.DATABASE
-
-    # CRM scale. For this mini project, CRM only stores users.
     n_users: int = 20
-
-    # Sri Lankan context fields used in the users CRM table.
     timezone: str = "Asia/Colombo"
     rand_seed: int = 42
-
-    # JSONL output if database is not used.
     output_file: Optional[Path] = None
+    logistics_dir: Path = Path("data/logistics")
 
     def __post_init__(self):
-        """Validate configuration."""
         if self.storage_backend == StorageBackend.JSONL and not self.output_file:
             self.output_file = Path("data/kapruka_users.jsonl")
 
-
-# ============================================================================
-# BASE CLASSES
-# ============================================================================
 
 class DataGenerator:
     """Base class for Kapruka CRM data generators."""
@@ -110,10 +94,6 @@ class StorageAdapter:
         raise NotImplementedError
 
 
-# ============================================================================
-# LLM DATA GENERATOR
-# ============================================================================
-
 class LLMDataGenerator(DataGenerator):
     """Generate realistic Sri Lankan user profiles using an LLM."""
 
@@ -128,17 +108,11 @@ class LLMDataGenerator(DataGenerator):
 
     @observe(name="seed_generate_kapruka_users", as_type="generation")
     def generate_users(self, n: int) -> List[Dict]:
-        """
-        Generate Kapruka gift-agent CRM users.
-
-        These are basic CRM records only. Preferences such as "likes dark
-        chocolate" should be extracted later and stored in mem_facts, not here.
-        """
         cache_key = f"kapruka_users_{n}"
         if cache_key in self._cache:
             return self._cache[cache_key]
 
-        self.logger.info(f"🤖 Generating {n} Sri Lankan Kapruka users via LLM...")
+        self.logger.info(f"Generating {n} Sri Lankan Kapruka users via LLM...")
 
         prompt = f"""Generate {n} realistic Sri Lankan user records for a Kapruka gift concierge CRM.
 
@@ -176,26 +150,33 @@ Generate exactly {n} users:"""
 
             users = users[:n]
             self._cache[cache_key] = users
-            self.logger.info(f"✓ Generated {len(users)} Kapruka users")
+            self.logger.info(f"Generated {len(users)} Kapruka users")
             return users
-
         except Exception as exc:
             self.logger.error(f"LLM user generation failed: {exc}")
             self.logger.warning("Falling back to template users...")
             return TemplateDataGenerator().generate_users(n)
 
 
-# ============================================================================
-# TEMPLATE DATA GENERATOR
-# ============================================================================
-
 class TemplateDataGenerator(DataGenerator):
     """Generate deterministic Kapruka CRM users using templates."""
 
     DISTRICTS = [
-        "Colombo", "Gampaha", "Kalutara", "Kandy", "Galle", "Matara",
-        "Kurunegala", "Jaffna", "Anuradhapura", "Badulla", "Ratnapura",
-        "Trincomalee", "Batticaloa", "Nuwara Eliya", "Hambantota",
+        "Colombo",
+        "Gampaha",
+        "Kalutara",
+        "Kandy",
+        "Galle",
+        "Matara",
+        "Kurunegala",
+        "Jaffna",
+        "Anuradhapura",
+        "Badulla",
+        "Ratnapura",
+        "Trincomalee",
+        "Batticaloa",
+        "Nuwara Eliya",
+        "Hambantota",
     ]
 
     BASE_USERS = [
@@ -217,104 +198,112 @@ class TemplateDataGenerator(DataGenerator):
         self.logger = logger
 
     def generate_users(self, n: int) -> List[Dict]:
-        """Generate deterministic user profiles."""
         users = []
         for i in range(n):
             name, gender = self.BASE_USERS[i % len(self.BASE_USERS)]
             district = self.DISTRICTS[i % len(self.DISTRICTS)]
             unique_suffix = i + 1
 
-            if i >= len(self.BASE_USERS):
-                full_name = f"{name} {unique_suffix}"
-            else:
-                full_name = name
-
+            full_name = f"{name} {unique_suffix}" if i >= len(self.BASE_USERS) else name
             name_parts = full_name.lower().replace(".", "").split()
             email = f"{name_parts[0]}.{name_parts[-1]}{unique_suffix}@gmail.com"
             phone = f"+947{random.randint(10000000, 99999999)}"
 
-            users.append({
-                "full_name": full_name,
-                "gender": gender,
-                "district": district,
-                "phone": phone,
-                "email": email,
-            })
+            users.append(
+                {
+                    "full_name": full_name,
+                    "gender": gender,
+                    "district": district,
+                    "phone": phone,
+                    "email": email,
+                }
+            )
 
-        self.logger.info(f"✓ Generated {len(users)} Kapruka users from templates")
+        self.logger.info(f"Generated {len(users)} Kapruka users from templates")
         return users
 
 
-# ============================================================================
-# STORAGE ADAPTERS
-# ============================================================================
-
 class DatabaseStorageAdapter(StorageAdapter):
     """Store Kapruka CRM data in Supabase/PostgreSQL or local SQL database."""
+
+    CLEAR_ORDER = [
+        "delivery_history",
+        "delivery_slots",
+        "courier_profiles",
+        "product_delivery_rules",
+        "delivery_zones",
+        "users",
+    ]
 
     def __init__(self, config: CRMSeederConfig):
         self.config = config
         self.logger = logger
 
+        from infrastructure.db.crm_models import (
+            CourierProfile,
+            DeliveryHistory,
+            DeliverySlot,
+            DeliveryZone,
+            ProductDeliveryRule,
+            User,
+        )
         from infrastructure.db.sql_client import get_sql_engine
-        from infrastructure.db.crm_models import User
 
         self.engine = get_sql_engine()
         self.Session = sessionmaker(bind=self.engine)
-        self.models = {"User": User}
+        self.models = {
+            "User": User,
+            "DeliveryZone": DeliveryZone,
+            "DeliverySlot": DeliverySlot,
+            "CourierProfile": CourierProfile,
+            "ProductDeliveryRule": ProductDeliveryRule,
+            "DeliveryHistory": DeliveryHistory,
+        }
         self.session = None
 
     def initialize(self):
-        """Initialize schema and clear existing CRM users."""
-        from infrastructure.db.crm_init import init_crm_schema
+        from infrastructure.db.crm_init import ensure_crm_schema_compatibility
+        from infrastructure.db.supabase_client import init_supabase_schema
 
-        init_crm_schema()
-        self.logger.info("✓ Kapruka CRM schema ready")
+        init_supabase_schema()
+        ensure_crm_schema_compatibility()
+        self.logger.info("Kapruka CRM/logistics schema ready")
 
         self.session = self.Session()
-
         if "sqlite" in str(self.engine.url):
             self.session.execute(text("PRAGMA foreign_keys = ON"))
 
         self._clear_existing_data()
-        self.logger.info("✓ Database initialized for Kapruka CRM")
+        self.logger.info("Database initialized for Kapruka CRM/logistics seeding")
 
     def _clear_existing_data(self):
-        """Delete existing CRM user seed data."""
-        try:
-            if "postgresql" in str(self.engine.url):
-                result = self.session.execute(text(
-                    "SELECT tablename FROM pg_tables WHERE schemaname='public' AND tablename='users'"
-                ))
-            else:
-                result = self.session.execute(text(
-                    "SELECT name FROM sqlite_master WHERE type='table' AND name='users'"
-                ))
+        inspector = inspect(self.engine)
+        existing_tables = set(
+            inspector.get_table_names(schema="public")
+            if "postgresql" in str(self.engine.url)
+            else inspector.get_table_names()
+        )
 
-            if result.fetchone() is None:
-                self.logger.info("⏭️  users table does not exist yet, skipping clear")
-                return
+        for table_name in self.CLEAR_ORDER:
+            if table_name not in existing_tables:
+                self.logger.info(f"Skipping clear for missing table: {table_name}")
+                continue
+            self.session.execute(text(f"DELETE FROM {table_name}"))
 
-            self.session.execute(text("DELETE FROM users"))
-            self.session.commit()
-            self.logger.info("✓ Cleared existing Kapruka CRM users")
-
-        except Exception as exc:
-            self.session.rollback()
-            self.logger.error(f"Failed to clear Kapruka CRM users: {exc}")
-            raise
+        self.session.commit()
+        self.logger.info("Cleared existing Kapruka CRM/logistics seed data")
 
     def store_data(self, data: Dict):
-        """Store a user record in the database session."""
         model_class = self.models[data["type"]]
         instance = model_class(**data["data"])
         self.session.add(instance)
 
     def finalize(self):
-        """Commit database changes."""
-        self.session.commit()
-        self.session.close()
-        self.logger.info("✓ Kapruka CRM data committed to database")
+        if self.session is not None:
+            self.session.commit()
+            self.session.close()
+            self.session = None
+        self.logger.info("Kapruka CRM/logistics data committed to database")
 
 
 class JSONLStorageAdapter(StorageAdapter):
@@ -326,33 +315,31 @@ class JSONLStorageAdapter(StorageAdapter):
         self.users = []
 
     def initialize(self):
-        """Initialize output file path."""
         self.config.output_file.parent.mkdir(parents=True, exist_ok=True)
-        self.logger.info(f"✓ JSONL output file: {self.config.output_file}")
+        self.logger.info(f"JSONL output file: {self.config.output_file}")
 
     def store_data(self, data: Dict):
-        """Store user data in memory until finalize."""
         if data["type"] == "User":
             self.users.append(data["data"])
 
     def finalize(self):
-        """Write JSONL file."""
         with open(self.config.output_file, "w", encoding="utf-8") as file:
             for user in self.users:
                 file.write(json.dumps(user, ensure_ascii=False) + "\n")
+        self.logger.info(f"Wrote {len(self.users)} users to {self.config.output_file}")
 
-        self.logger.info(f"✓ Wrote {len(self.users)} users to {self.config.output_file}")
-
-
-# ============================================================================
-# UNIFIED KAPRUKA CRM SEEDER
-# ============================================================================
 
 class UnifiedCRMSeeder:
-    """Unified Kapruka CRM seeder."""
+    """Unified Kapruka CRM/logistics seeder."""
 
-    # Optional deterministic SQL file. Products are intentionally excluded.
-    SQL_SEED_FILES = ["sql/01_users.sql"]
+    USER_SQL_SEED_FILE = "sql/01_users.sql"
+    LOGISTICS_JSON_SOURCES = [
+        ("DeliveryZone", "delivery_zones.json"),
+        ("DeliverySlot", "delivery_slots.json"),
+        ("CourierProfile", "courier_profiles.json"),
+        ("ProductDeliveryRule", "product_delivery_rules.json"),
+        ("DeliveryHistory", "delivery_history.json"),
+    ]
 
     def __init__(self, config: CRMSeederConfig):
         self.config = config
@@ -363,103 +350,135 @@ class UnifiedCRMSeeder:
         random.seed(config.rand_seed)
 
     def _create_generator(self) -> DataGenerator:
-        """Create the configured data generator."""
         if self.config.generation_mode == DataGenerationMode.LLM:
-            self.logger.info("🤖 Using LLM user generator")
+            self.logger.info("Using LLM user generator")
             return LLMDataGenerator()
-
-        self.logger.info("📋 Using template user generator")
+        self.logger.info("Using template user generator")
         return TemplateDataGenerator()
 
     def _create_storage(self) -> StorageAdapter:
-        """Create the configured storage adapter."""
         if self.config.storage_backend == StorageBackend.DATABASE:
-            self.logger.info("🗄️  Using database storage")
+            self.logger.info("Using database storage")
             return DatabaseStorageAdapter(self.config)
-
-        self.logger.info("📄 Using JSONL storage")
+        self.logger.info("Using JSONL storage")
         return JSONLStorageAdapter(self.config)
 
-    def _sql_files_exist(self) -> bool:
-        """Check whether deterministic SQL seed files are available."""
-        return all((self.project_root / file).exists() for file in self.SQL_SEED_FILES)
+    def _user_sql_seed_exists(self) -> bool:
+        return (self.project_root / self.USER_SQL_SEED_FILE).exists()
 
-    def _seed_from_sql(self) -> bool:
-        """Seed users from pre-exported SQL files."""
+    def _load_json_source(self, filename: str) -> List[Dict]:
+        path = self.project_root / self.config.logistics_dir / filename
+        with open(path, "r", encoding="utf-8") as file:
+            return json.load(file)
+
+    def _seed_logistics_from_json(self) -> Dict[str, int]:
+        if self.config.storage_backend != StorageBackend.DATABASE:
+            self.logger.info("Skipping logistics table seeding in JSONL mode")
+            return {}
+
+        counts: Dict[str, int] = {}
+        self.logger.info("Loading logistics reference data from JSON sources")
+
+        for record_type, filename in self.LOGISTICS_JSON_SOURCES:
+            rows = self._load_json_source(filename)
+            counts[record_type] = len(rows)
+            for row in rows:
+                self.storage.store_data({"type": record_type, "data": row})
+            if (
+                self.config.storage_backend == StorageBackend.DATABASE
+                and isinstance(self.storage, DatabaseStorageAdapter)
+                and self.storage.session is not None
+            ):
+                self.storage.session.flush()
+
+        self.logger.info(
+            "Loaded logistics rows from JSON: {}",
+            {key: value for key, value in counts.items()},
+        )
+        return counts
+
+    def _seed_users_from_sql(self) -> int:
         from infrastructure.db.sql_client import get_sql_engine
 
         engine = get_sql_engine()
-        self.logger.info("📂 Found Kapruka SQL seed files, loading deterministic users")
+        sql_path = self.project_root / self.USER_SQL_SEED_FILE
+        sql_content = sql_path.read_text(encoding="utf-8")
+
+        self.logger.info("Found SQL user seed file, loading deterministic users")
 
         try:
-            with engine.connect() as conn:
-                for sql_file in self.SQL_SEED_FILES:
-                    path = self.project_root / sql_file
-                    sql_content = path.read_text(encoding="utf-8")
+            with engine.begin() as conn:
+                lines = [
+                    line for line in sql_content.splitlines()
+                    if line.strip() and not line.strip().startswith("--")
+                ]
+                statements = [
+                    stmt.strip() for stmt in "\n".join(lines).split(";") if stmt.strip()
+                ]
+                for stmt in statements:
+                    conn.execute(text(stmt))
 
-                    lines = [
-                        line for line in sql_content.splitlines()
-                        if line.strip() and not line.strip().startswith("--")
-                    ]
-                    statements = [
-                        stmt.strip() for stmt in "\n".join(lines).split(";")
-                        if stmt.strip()
-                    ]
+                user_count = conn.execute(text("SELECT COUNT(*) FROM users")).scalar() or 0
 
-                    row_count = 0
-                    for stmt in statements:
-                        conn.execute(text(stmt))
-                        if stmt.upper().startswith("INSERT"):
-                            row_count += 1
-
-                    conn.commit()
-                    self.logger.info(f"  ✅ users: {row_count} rows loaded from {sql_file}")
-
-            return True
-
+            self.logger.info(f"Loaded {user_count} users from {self.USER_SQL_SEED_FILE}")
+            return int(user_count)
         except Exception as exc:
-            self.logger.error(f"❌ Kapruka SQL seed failed: {exc}")
-            self.logger.info("   Falling back to generated users...")
-            return False
+            self.logger.error(f"SQL user seed failed: {exc}")
+            self.logger.info("Falling back to generated users...")
+            return 0
 
     def seed(self):
-        """Run the Kapruka CRM seeding workflow."""
         self.logger.info("=" * 70)
-        self.logger.info("🌱 Starting Kapruka CRM user seeding")
+        self.logger.info("Starting Kapruka CRM + logistics seeding")
         self.logger.info("=" * 70)
 
         start_time = time.time()
-
-        if self.config.storage_backend == StorageBackend.DATABASE and self._sql_files_exist():
-            from infrastructure.db.crm_init import init_crm_schema
-            init_crm_schema()
-
-            if self._seed_from_sql():
-                elapsed = time.time() - start_time
-                self.logger.info("=" * 70)
-                self.logger.info(f"✅ Kapruka CRM seeded from SQL in {elapsed:.1f}s")
-                self.logger.info("=" * 70)
-                return
-
-        self.logger.info("⚙️  No SQL seed files found, generating Kapruka users dynamically")
         self.storage.initialize()
 
-        users = self._seed_users()
+        logistics_counts = self._seed_logistics_from_json()
+        users: List[Dict] = []
+        user_count = 0
 
-        self.storage.finalize()
+        if (
+            self.config.storage_backend == StorageBackend.DATABASE
+            and self._user_sql_seed_exists()
+        ):
+            # Commit JSON-backed logistics rows before using the raw SQL user seed.
+            self.storage.finalize()
+            user_count = self._seed_users_from_sql()
+            if user_count == 0 and isinstance(self.storage, DatabaseStorageAdapter):
+                self.storage.session = self.storage.Session()
+                if "sqlite" in str(self.storage.engine.url):
+                    self.storage.session.execute(text("PRAGMA foreign_keys = ON"))
+                users = self._seed_users()
+                user_count = len(users)
+                self.storage.finalize()
+        else:
+            users = self._seed_users()
+            user_count = len(users)
+            self.storage.finalize()
 
         elapsed = time.time() - start_time
         self.logger.info("=" * 70)
-        self.logger.info("✅ Kapruka CRM seeding complete")
-        self.logger.info(f"   Time: {elapsed:.1f}s")
-        self.logger.info(f"   Users: {len(users)}")
-        self.logger.info("   Product catalog: not seeded here, stored in Qdrant")
-        self.logger.info("   Preferences: extracted later into mem_facts")
+        self.logger.info("Kapruka CRM + logistics seeding complete")
+        self.logger.info(f"Time: {elapsed:.1f}s")
+        self.logger.info(f"Users: {user_count}")
+        if logistics_counts:
+            self.logger.info(f"Delivery zones: {logistics_counts.get('DeliveryZone', 0)}")
+            self.logger.info(f"Delivery slots: {logistics_counts.get('DeliverySlot', 0)}")
+            self.logger.info(f"Courier profiles: {logistics_counts.get('CourierProfile', 0)}")
+            self.logger.info(
+                f"Product delivery rules: {logistics_counts.get('ProductDeliveryRule', 0)}"
+            )
+            self.logger.info(
+                f"Delivery history rows: {logistics_counts.get('DeliveryHistory', 0)}"
+            )
+        self.logger.info("Product catalog: not seeded here, stored in Qdrant")
+        self.logger.info("Preferences: extracted later into mem_facts")
         self.logger.info("=" * 70)
 
     def _seed_users(self) -> List[Dict]:
-        """Seed users into the CRM users table."""
-        self.logger.info(f"👤 Seeding {self.config.n_users} Kapruka users...")
+        self.logger.info(f"Seeding {self.config.n_users} Kapruka users...")
 
         users_data = self.generator.generate_users(self.config.n_users)
         users = []
@@ -473,8 +492,12 @@ class UnifiedCRMSeeder:
             email = user_data.get("email")
             if not email:
                 name_parts = full_name.lower().replace(".", "").split()
-                email = f"{name_parts[0]}.{name_parts[-1]}@gmail.com" if len(name_parts) > 1 else f"{name_parts[0]}@gmail.com"
+                if len(name_parts) > 1:
+                    email = f"{name_parts[0]}.{name_parts[-1]}@gmail.com"
+                else:
+                    email = f"{name_parts[0]}@gmail.com"
 
+            now = int(time.time())
             data = {
                 "type": "User",
                 "data": {
@@ -484,10 +507,12 @@ class UnifiedCRMSeeder:
                     "phone": phone,
                     "email": email,
                     "district": user_data.get("district"),
+                    "province": user_data.get("province"),
+                    "address": user_data.get("address"),
                     "notes": user_data.get("notes"),
                     "active": True,
-                    "created_at": int(time.time()),
-                    "updated_at": int(time.time()),
+                    "created_at": now,
+                    "updated_at": now,
                 },
             }
 
@@ -497,23 +522,14 @@ class UnifiedCRMSeeder:
         return users
 
 
-# ============================================================================
-# CLI INTERFACE
-# ============================================================================
-
 def main():
     parser = argparse.ArgumentParser(
-        description="Unified Kapruka CRM Data Seeder",
+        description="Unified Kapruka CRM + logistics data seeder",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:
-  # LLM + database
   python seed_crm_unified.py --n-users 20
-
-  # Template + database
   python seed_crm_unified.py --mode template --n-users 50
-
-  # Template + JSONL file
   python seed_crm_unified.py --mode template --storage jsonl --output data/kapruka_users.jsonl
         """,
     )
@@ -522,7 +538,7 @@ Examples:
         "--mode",
         choices=["llm", "template"],
         default="llm",
-        help="Data generation mode",
+        help="User data generation mode",
     )
     parser.add_argument(
         "--storage",

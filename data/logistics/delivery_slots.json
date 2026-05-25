@@ -1,0 +1,752 @@
+[
+  {
+    "district": "Colombo",
+    "slot": "08:00-10:00",
+    "capacity": 201,
+    "available": true
+  },
+  {
+    "district": "Colombo",
+    "slot": "10:00-12:00",
+    "capacity": 426,
+    "available": true
+  },
+  {
+    "district": "Colombo",
+    "slot": "12:00-14:00",
+    "capacity": 360,
+    "available": true
+  },
+  {
+    "district": "Colombo",
+    "slot": "14:00-16:00",
+    "capacity": 354,
+    "available": true
+  },
+  {
+    "district": "Colombo",
+    "slot": "16:00-18:00",
+    "capacity": 148,
+    "available": true
+  },
+  {
+    "district": "Gampaha",
+    "slot": "08:00-10:00",
+    "capacity": 63,
+    "available": true
+  },
+  {
+    "district": "Gampaha",
+    "slot": "10:00-12:00",
+    "capacity": 153,
+    "available": true
+  },
+  {
+    "district": "Gampaha",
+    "slot": "12:00-14:00",
+    "capacity": 284,
+    "available": true
+  },
+  {
+    "district": "Gampaha",
+    "slot": "14:00-16:00",
+    "capacity": 166,
+    "available": false
+  },
+  {
+    "district": "Gampaha",
+    "slot": "16:00-18:00",
+    "capacity": 363,
+    "available": true
+  },
+  {
+    "district": "Kalutara",
+    "slot": "08:00-10:00",
+    "capacity": 230,
+    "available": false
+  },
+  {
+    "district": "Kalutara",
+    "slot": "10:00-12:00",
+    "capacity": 77,
+    "available": true
+  },
+  {
+    "district": "Kalutara",
+    "slot": "12:00-14:00",
+    "capacity": 305,
+    "available": false
+  },
+  {
+    "district": "Kalutara",
+    "slot": "14:00-16:00",
+    "capacity": 317,
+    "available": false
+  },
+  {
+    "district": "Kalutara",
+    "slot": "16:00-18:00",
+    "capacity": 324,
+    "available": true
+  },
+  {
+    "district": "Kandy",
+    "slot": "08:00-10:00",
+    "capacity": 222,
+    "available": true
+  },
+  {
+    "district": "Kandy",
+    "slot": "10:00-12:00",
+    "capacity": 434,
+    "available": true
+  },
+  {
+    "district": "Kandy",
+    "slot": "12:00-14:00",
+    "capacity": 218,
+    "available": true
+  },
+  {
+    "district": "Kandy",
+    "slot": "14:00-16:00",
+    "capacity": 287,
+    "available": true
+  },
+  {
+    "district": "Kandy",
+    "slot": "16:00-18:00",
+    "capacity": 195,
+    "available": true
+  },
+  {
+    "district": "Matale",
+    "slot": "08:00-10:00",
+    "capacity": 308,
+    "available": true
+  },
+  {
+    "district": "Matale",
+    "slot": "10:00-12:00",
+    "capacity": 453,
+    "available": false
+  },
+  {
+    "district": "Matale",
+    "slot": "12:00-14:00",
+    "capacity": 267,
+    "available": true
+  },
+  {
+    "district": "Matale",
+    "slot": "14:00-16:00",
+    "capacity": 389,
+    "available": false
+  },
+  {
+    "district": "Matale",
+    "slot": "16:00-18:00",
+    "capacity": 117,
+    "available": false
+  },
+  {
+    "district": "Nuwara Eliya",
+    "slot": "08:00-10:00",
+    "capacity": 472,
+    "available": false
+  },
+  {
+    "district": "Nuwara Eliya",
+    "slot": "10:00-12:00",
+    "capacity": 289,
+    "available": true
+  },
+  {
+    "district": "Nuwara Eliya",
+    "slot": "12:00-14:00",
+    "capacity": 419,
+    "available": false
+  },
+  {
+    "district": "Nuwara Eliya",
+    "slot": "14:00-16:00",
+    "capacity": 432,
+    "available": true
+  },
+  {
+    "district": "Nuwara Eliya",
+    "slot": "16:00-18:00",
+    "capacity": 69,
+    "available": true
+  },
+  {
+    "district": "Galle",
+    "slot": "08:00-10:00",
+    "capacity": 452,
+    "available": false
+  },
+  {
+    "district": "Galle",
+    "slot": "10:00-12:00",
+    "capacity": 235,
+    "available": false
+  },
+  {
+    "district": "Galle",
+    "slot": "12:00-14:00",
+    "capacity": 313,
+    "available": false
+  },
+  {
+    "district": "Galle",
+    "slot": "14:00-16:00",
+    "capacity": 476,
+    "available": true
+  },
+  {
+    "district": "Galle",
+    "slot": "16:00-18:00",
+    "capacity": 197,
+    "available": false
+  },
+  {
+    "district": "Matara",
+    "slot": "08:00-10:00",
+    "capacity": 464,
+    "available": false
+  },
+  {
+    "district": "Matara",
+    "slot": "10:00-12:00",
+    "capacity": 244,
+    "available": false
+  },
+  {
+    "district": "Matara",
+    "slot": "12:00-14:00",
+    "capacity": 260,
+    "available": true
+  },
+  {
+    "district": "Matara",
+    "slot": "14:00-16:00",
+    "capacity": 187,
+    "available": true
+  },
+  {
+    "district": "Matara",
+    "slot": "16:00-18:00",
+    "capacity": 56,
+    "available": false
+  },
+  {
+    "district": "Hambantota",
+    "slot": "08:00-10:00",
+    "capacity": 279,
+    "available": true
+  },
+  {
+    "district": "Hambantota",
+    "slot": "10:00-12:00",
+    "capacity": 416,
+    "available": false
+  },
+  {
+    "district": "Hambantota",
+    "slot": "12:00-14:00",
+    "capacity": 97,
+    "available": true
+  },
+  {
+    "district": "Hambantota",
+    "slot": "14:00-16:00",
+    "capacity": 398,
+    "available": false
+  },
+  {
+    "district": "Hambantota",
+    "slot": "16:00-18:00",
+    "capacity": 305,
+    "available": true
+  },
+  {
+    "district": "Jaffna",
+    "slot": "08:00-10:00",
+    "capacity": 374,
+    "available": true
+  },
+  {
+    "district": "Jaffna",
+    "slot": "10:00-12:00",
+    "capacity": 348,
+    "available": true
+  },
+  {
+    "district": "Jaffna",
+    "slot": "12:00-14:00",
+    "capacity": 481,
+    "available": true
+  },
+  {
+    "district": "Jaffna",
+    "slot": "14:00-16:00",
+    "capacity": 155,
+    "available": true
+  },
+  {
+    "district": "Jaffna",
+    "slot": "16:00-18:00",
+    "capacity": 112,
+    "available": true
+  },
+  {
+    "district": "Kilinochchi",
+    "slot": "08:00-10:00",
+    "capacity": 129,
+    "available": true
+  },
+  {
+    "district": "Kilinochchi",
+    "slot": "10:00-12:00",
+    "capacity": 322,
+    "available": true
+  },
+  {
+    "district": "Kilinochchi",
+    "slot": "12:00-14:00",
+    "capacity": 355,
+    "available": true
+  },
+  {
+    "district": "Kilinochchi",
+    "slot": "14:00-16:00",
+    "capacity": 188,
+    "available": true
+  },
+  {
+    "district": "Kilinochchi",
+    "slot": "16:00-18:00",
+    "capacity": 225,
+    "available": true
+  },
+  {
+    "district": "Mannar",
+    "slot": "08:00-10:00",
+    "capacity": 207,
+    "available": true
+  },
+  {
+    "district": "Mannar",
+    "slot": "10:00-12:00",
+    "capacity": 331,
+    "available": true
+  },
+  {
+    "district": "Mannar",
+    "slot": "12:00-14:00",
+    "capacity": 444,
+    "available": true
+  },
+  {
+    "district": "Mannar",
+    "slot": "14:00-16:00",
+    "capacity": 446,
+    "available": true
+  },
+  {
+    "district": "Mannar",
+    "slot": "16:00-18:00",
+    "capacity": 146,
+    "available": false
+  },
+  {
+    "district": "Vavuniya",
+    "slot": "08:00-10:00",
+    "capacity": 427,
+    "available": false
+  },
+  {
+    "district": "Vavuniya",
+    "slot": "10:00-12:00",
+    "capacity": 455,
+    "available": true
+  },
+  {
+    "district": "Vavuniya",
+    "slot": "12:00-14:00",
+    "capacity": 153,
+    "available": true
+  },
+  {
+    "district": "Vavuniya",
+    "slot": "14:00-16:00",
+    "capacity": 386,
+    "available": true
+  },
+  {
+    "district": "Vavuniya",
+    "slot": "16:00-18:00",
+    "capacity": 320,
+    "available": true
+  },
+  {
+    "district": "Mullaitivu",
+    "slot": "08:00-10:00",
+    "capacity": 209,
+    "available": true
+  },
+  {
+    "district": "Mullaitivu",
+    "slot": "10:00-12:00",
+    "capacity": 112,
+    "available": false
+  },
+  {
+    "district": "Mullaitivu",
+    "slot": "12:00-14:00",
+    "capacity": 487,
+    "available": true
+  },
+  {
+    "district": "Mullaitivu",
+    "slot": "14:00-16:00",
+    "capacity": 334,
+    "available": true
+  },
+  {
+    "district": "Mullaitivu",
+    "slot": "16:00-18:00",
+    "capacity": 300,
+    "available": true
+  },
+  {
+    "district": "Batticaloa",
+    "slot": "08:00-10:00",
+    "capacity": 108,
+    "available": true
+  },
+  {
+    "district": "Batticaloa",
+    "slot": "10:00-12:00",
+    "capacity": 470,
+    "available": false
+  },
+  {
+    "district": "Batticaloa",
+    "slot": "12:00-14:00",
+    "capacity": 248,
+    "available": true
+  },
+  {
+    "district": "Batticaloa",
+    "slot": "14:00-16:00",
+    "capacity": 423,
+    "available": true
+  },
+  {
+    "district": "Batticaloa",
+    "slot": "16:00-18:00",
+    "capacity": 42,
+    "available": false
+  },
+  {
+    "district": "Ampara",
+    "slot": "08:00-10:00",
+    "capacity": 370,
+    "available": true
+  },
+  {
+    "district": "Ampara",
+    "slot": "10:00-12:00",
+    "capacity": 252,
+    "available": false
+  },
+  {
+    "district": "Ampara",
+    "slot": "12:00-14:00",
+    "capacity": 167,
+    "available": true
+  },
+  {
+    "district": "Ampara",
+    "slot": "14:00-16:00",
+    "capacity": 425,
+    "available": true
+  },
+  {
+    "district": "Ampara",
+    "slot": "16:00-18:00",
+    "capacity": 383,
+    "available": true
+  },
+  {
+    "district": "Trincomalee",
+    "slot": "08:00-10:00",
+    "capacity": 237,
+    "available": true
+  },
+  {
+    "district": "Trincomalee",
+    "slot": "10:00-12:00",
+    "capacity": 104,
+    "available": false
+  },
+  {
+    "district": "Trincomalee",
+    "slot": "12:00-14:00",
+    "capacity": 454,
+    "available": true
+  },
+  {
+    "district": "Trincomalee",
+    "slot": "14:00-16:00",
+    "capacity": 231,
+    "available": false
+  },
+  {
+    "district": "Trincomalee",
+    "slot": "16:00-18:00",
+    "capacity": 97,
+    "available": true
+  },
+  {
+    "district": "Kurunegala",
+    "slot": "08:00-10:00",
+    "capacity": 37,
+    "available": true
+  },
+  {
+    "district": "Kurunegala",
+    "slot": "10:00-12:00",
+    "capacity": 297,
+    "available": true
+  },
+  {
+    "district": "Kurunegala",
+    "slot": "12:00-14:00",
+    "capacity": 396,
+    "available": true
+  },
+  {
+    "district": "Kurunegala",
+    "slot": "14:00-16:00",
+    "capacity": 390,
+    "available": true
+  },
+  {
+    "district": "Kurunegala",
+    "slot": "16:00-18:00",
+    "capacity": 349,
+    "available": true
+  },
+  {
+    "district": "Puttalam",
+    "slot": "08:00-10:00",
+    "capacity": 67,
+    "available": true
+  },
+  {
+    "district": "Puttalam",
+    "slot": "10:00-12:00",
+    "capacity": 314,
+    "available": true
+  },
+  {
+    "district": "Puttalam",
+    "slot": "12:00-14:00",
+    "capacity": 290,
+    "available": true
+  },
+  {
+    "district": "Puttalam",
+    "slot": "14:00-16:00",
+    "capacity": 237,
+    "available": true
+  },
+  {
+    "district": "Puttalam",
+    "slot": "16:00-18:00",
+    "capacity": 78,
+    "available": true
+  },
+  {
+    "district": "Anuradhapura",
+    "slot": "08:00-10:00",
+    "capacity": 403,
+    "available": true
+  },
+  {
+    "district": "Anuradhapura",
+    "slot": "10:00-12:00",
+    "capacity": 431,
+    "available": false
+  },
+  {
+    "district": "Anuradhapura",
+    "slot": "12:00-14:00",
+    "capacity": 388,
+    "available": true
+  },
+  {
+    "district": "Anuradhapura",
+    "slot": "14:00-16:00",
+    "capacity": 196,
+    "available": true
+  },
+  {
+    "district": "Anuradhapura",
+    "slot": "16:00-18:00",
+    "capacity": 124,
+    "available": false
+  },
+  {
+    "district": "Polonnaruwa",
+    "slot": "08:00-10:00",
+    "capacity": 174,
+    "available": true
+  },
+  {
+    "district": "Polonnaruwa",
+    "slot": "10:00-12:00",
+    "capacity": 465,
+    "available": true
+  },
+  {
+    "district": "Polonnaruwa",
+    "slot": "12:00-14:00",
+    "capacity": 327,
+    "available": true
+  },
+  {
+    "district": "Polonnaruwa",
+    "slot": "14:00-16:00",
+    "capacity": 83,
+    "available": true
+  },
+  {
+    "district": "Polonnaruwa",
+    "slot": "16:00-18:00",
+    "capacity": 380,
+    "available": false
+  },
+  {
+    "district": "Badulla",
+    "slot": "08:00-10:00",
+    "capacity": 246,
+    "available": true
+  },
+  {
+    "district": "Badulla",
+    "slot": "10:00-12:00",
+    "capacity": 219,
+    "available": true
+  },
+  {
+    "district": "Badulla",
+    "slot": "12:00-14:00",
+    "capacity": 304,
+    "available": true
+  },
+  {
+    "district": "Badulla",
+    "slot": "14:00-16:00",
+    "capacity": 455,
+    "available": true
+  },
+  {
+    "district": "Badulla",
+    "slot": "16:00-18:00",
+    "capacity": 186,
+    "available": true
+  },
+  {
+    "district": "Monaragala",
+    "slot": "08:00-10:00",
+    "capacity": 318,
+    "available": true
+  },
+  {
+    "district": "Monaragala",
+    "slot": "10:00-12:00",
+    "capacity": 303,
+    "available": true
+  },
+  {
+    "district": "Monaragala",
+    "slot": "12:00-14:00",
+    "capacity": 440,
+    "available": false
+  },
+  {
+    "district": "Monaragala",
+    "slot": "14:00-16:00",
+    "capacity": 209,
+    "available": true
+  },
+  {
+    "district": "Monaragala",
+    "slot": "16:00-18:00",
+    "capacity": 379,
+    "available": false
+  },
+  {
+    "district": "Ratnapura",
+    "slot": "08:00-10:00",
+    "capacity": 248,
+    "available": true
+  },
+  {
+    "district": "Ratnapura",
+    "slot": "10:00-12:00",
+    "capacity": 164,
+    "available": true
+  },
+  {
+    "district": "Ratnapura",
+    "slot": "12:00-14:00",
+    "capacity": 430,
+    "available": true
+  },
+  {
+    "district": "Ratnapura",
+    "slot": "14:00-16:00",
+    "capacity": 136,
+    "available": true
+  },
+  {
+    "district": "Ratnapura",
+    "slot": "16:00-18:00",
+    "capacity": 245,
+    "available": false
+  },
+  {
+    "district": "Kegalle",
+    "slot": "08:00-10:00",
+    "capacity": 243,
+    "available": false
+  },
+  {
+    "district": "Kegalle",
+    "slot": "10:00-12:00",
+    "capacity": 393,
+    "available": false
+  },
+  {
+    "district": "Kegalle",
+    "slot": "12:00-14:00",
+    "capacity": 132,
+    "available": true
+  },
+  {
+    "district": "Kegalle",
+    "slot": "14:00-16:00",
+    "capacity": 462,
+    "available": true
+  },
+  {
+    "district": "Kegalle",
+    "slot": "16:00-18:00",
+    "capacity": 50,
+    "available": false
+  }
+]

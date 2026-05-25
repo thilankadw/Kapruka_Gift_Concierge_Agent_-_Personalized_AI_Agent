@@ -15,6 +15,8 @@ INSERT INTO users (
     email,
     phone,
     district,
+    province,
+    address,
     active,
     created_at,
     updated_at
@@ -26,6 +28,8 @@ INSERT INTO users (
     'thilanka@gmail.com',
     '+94771234567',
     'Colombo',
+    'Western',
+    'No. 12, Flower Road, Colombo 07',
     TRUE,
     EXTRACT(EPOCH FROM NOW()),
     EXTRACT(EPOCH FROM NOW())
@@ -38,6 +42,8 @@ INSERT INTO users (
     'nethmi.perera@gmail.com',
     '+94772345678',
     'Kandy',
+    'Central',
+    'No. 18, William Gopallawa Mawatha, Kandy',
     TRUE,
     EXTRACT(EPOCH FROM NOW()),
     EXTRACT(EPOCH FROM NOW())
@@ -50,6 +56,8 @@ INSERT INTO users (
     'kasun.silva@gmail.com',
     '+94773456789',
     'Galle',
+    'Southern',
+    'No. 55, Wakwella Road, Galle',
     TRUE,
     EXTRACT(EPOCH FROM NOW()),
     EXTRACT(EPOCH FROM NOW())
@@ -62,6 +70,8 @@ INSERT INTO users (
     'sanduni.fernando@gmail.com',
     '+94774567890',
     'Kurunegala',
+    'North Western',
+    'No. 9, Bauddhaloka Mawatha, Kurunegala',
     TRUE,
     EXTRACT(EPOCH FROM NOW()),
     EXTRACT(EPOCH FROM NOW())
@@ -74,6 +84,8 @@ INSERT INTO users (
     'amila.j@gmail.com',
     '+94775678901',
     'Jaffna',
+    'Northern',
+    'No. 22, Temple Road, Jaffna',
     TRUE,
     EXTRACT(EPOCH FROM NOW()),
     EXTRACT(EPOCH FROM NOW())
@@ -86,6 +98,8 @@ INSERT INTO users (
     'chamodi.w@gmail.com',
     '+94776789012',
     'Matara',
+    'Southern',
+    'No. 61, Beach Road, Matara',
     TRUE,
     EXTRACT(EPOCH FROM NOW()),
     EXTRACT(EPOCH FROM NOW())
@@ -98,6 +112,8 @@ INSERT INTO users (
     'dinesh.r@gmail.com',
     '+94777890123',
     'Negombo',
+    'Western',
+    'No. 47, Lewis Place, Negombo',
     TRUE,
     EXTRACT(EPOCH FROM NOW()),
     EXTRACT(EPOCH FROM NOW())
@@ -110,6 +126,8 @@ INSERT INTO users (
     'tharushi.ds@gmail.com',
     '+94778901234',
     'Anuradhapura',
+    'North Central',
+    'No. 14, Maithripala Senanayake Mawatha, Anuradhapura',
     TRUE,
     EXTRACT(EPOCH FROM NOW()),
     EXTRACT(EPOCH FROM NOW())
@@ -122,6 +140,8 @@ INSERT INTO users (
     'sahan.g@gmail.com',
     '+94779012345',
     'Batticaloa',
+    'Eastern',
+    'No. 33, Trinco Road, Batticaloa',
     TRUE,
     EXTRACT(EPOCH FROM NOW()),
     EXTRACT(EPOCH FROM NOW())
@@ -134,6 +154,8 @@ INSERT INTO users (
     'madhavi.s@gmail.com',
     '+94770123456',
     'Ratnapura',
+    'Sabaragamuwa',
+    'No. 27, Main Street, Ratnapura',
     TRUE,
     EXTRACT(EPOCH FROM NOW()),
     EXTRACT(EPOCH FROM NOW())

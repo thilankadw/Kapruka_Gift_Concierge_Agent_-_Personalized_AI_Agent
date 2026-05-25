@@ -9,7 +9,7 @@
 --
 -- Architecture:
 -- 1. Supabase Postgres + pgvector stores the agent memory system.
--- 2. CRM is domain-specific. For this project, only the users table is needed.
+-- 2. CRM is domain-specific. For this project, users plus logistics tables are needed.
 -- 3. Kapruka product catalog is NOT stored here. Product metadata is vectorized
 --    and stored in Qdrant for RAG-based product retrieval.
 --
@@ -300,7 +300,7 @@ COMMENT ON FUNCTION search_mem_procedures IS 'Semantic search over Kapruka proce
 
 -- ============================================================================
 -- CRM: USERS
--- Minimal CRM table for the Kapruka project.
+-- Core CRM table for the Kapruka project.
 --
 -- Product data is intentionally excluded from the CRM because the product
 -- catalog is vectorized and stored in Qdrant for RAG retrieval.
@@ -313,11 +313,16 @@ CREATE TABLE IF NOT EXISTS users (
     email TEXT UNIQUE,
     phone TEXT,
     district TEXT,
+    province TEXT,
+    address TEXT,
     notes TEXT,
     active BOOLEAN NOT NULL DEFAULT TRUE,
     created_at INTEGER NOT NULL,
     updated_at INTEGER NOT NULL
 );
+
+ALTER TABLE users ADD COLUMN IF NOT EXISTS province TEXT;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS address TEXT;
 
 DO $$
 BEGIN
@@ -356,7 +361,118 @@ ON users(district);
 COMMENT ON TABLE users IS 'Kapruka CRM user profiles. Preferences are stored in mem_facts, not in this table';
 COMMENT ON COLUMN users.external_user_id IS 'External chat or application identifier if available';
 COMMENT ON COLUMN users.district IS 'Default Sri Lankan delivery district or user location';
+COMMENT ON COLUMN users.province IS 'Optional Sri Lankan province for the user profile';
+COMMENT ON COLUMN users.address IS 'Optional delivery address or address note';
 COMMENT ON COLUMN users.notes IS 'Optional CRM notes. Durable preferences should be saved in mem_facts';
+
+-- ============================================================================
+-- LOGISTICS: DELIVERY ZONES
+-- Structured district-level delivery configuration sourced from JSON assets.
+-- ============================================================================
+
+CREATE TABLE IF NOT EXISTS delivery_zones (
+    district TEXT PRIMARY KEY,
+    delivery_available BOOLEAN NOT NULL,
+    same_day BOOLEAN NOT NULL,
+    express_available BOOLEAN NOT NULL,
+    minimum_notice_hours INTEGER NOT NULL CHECK (minimum_notice_hours >= 0),
+    max_daily_orders INTEGER NOT NULL CHECK (max_daily_orders >= 0),
+    active_couriers INTEGER NOT NULL CHECK (active_couriers >= 0)
+);
+
+COMMENT ON TABLE delivery_zones IS 'District-level delivery coverage and capacity configuration for Kapruka logistics';
+
+-- ============================================================================
+-- LOGISTICS: DELIVERY SLOTS
+-- Slot-level delivery availability by district.
+-- ============================================================================
+
+CREATE TABLE IF NOT EXISTS delivery_slots (
+    district TEXT NOT NULL REFERENCES delivery_zones(district)
+        ON UPDATE CASCADE ON DELETE CASCADE,
+    slot TEXT NOT NULL,
+    capacity INTEGER NOT NULL CHECK (capacity >= 0),
+    available BOOLEAN NOT NULL,
+    PRIMARY KEY (district, slot)
+);
+
+CREATE INDEX IF NOT EXISTS idx_delivery_slots_district
+ON delivery_slots(district);
+
+CREATE INDEX IF NOT EXISTS idx_delivery_slots_available
+ON delivery_slots(available);
+
+COMMENT ON TABLE delivery_slots IS 'Delivery slot capacity and availability by district';
+
+-- ============================================================================
+-- LOGISTICS: COURIER PROFILES
+-- Courier capacity and assignment metadata by district.
+-- ============================================================================
+
+CREATE TABLE IF NOT EXISTS courier_profiles (
+    courier_id TEXT PRIMARY KEY,
+    name TEXT NOT NULL,
+    district TEXT NOT NULL REFERENCES delivery_zones(district)
+        ON UPDATE CASCADE ON DELETE RESTRICT,
+    vehicle_type TEXT NOT NULL,
+    availability BOOLEAN NOT NULL,
+    max_deliveries_per_day INTEGER NOT NULL CHECK (max_deliveries_per_day >= 0),
+    rating REAL NOT NULL CHECK (rating >= 0 AND rating <= 5)
+);
+
+CREATE INDEX IF NOT EXISTS idx_courier_profiles_district
+ON courier_profiles(district);
+
+CREATE INDEX IF NOT EXISTS idx_courier_profiles_availability
+ON courier_profiles(availability);
+
+CREATE INDEX IF NOT EXISTS idx_courier_profiles_vehicle_type
+ON courier_profiles(vehicle_type);
+
+COMMENT ON TABLE courier_profiles IS 'Courier profiles used for delivery planning and capacity reasoning';
+
+-- ============================================================================
+-- LOGISTICS: PRODUCT DELIVERY RULES
+-- Product-level delivery constraints sourced from structured JSON data.
+-- ============================================================================
+
+CREATE TABLE IF NOT EXISTS product_delivery_rules (
+    product_type TEXT PRIMARY KEY,
+    fragile BOOLEAN NOT NULL,
+    temperature_control_required BOOLEAN NOT NULL,
+    same_day_allowed BOOLEAN NOT NULL,
+    minimum_notice_hours INTEGER NOT NULL CHECK (minimum_notice_hours >= 0),
+    max_delivery_distance_km INTEGER NOT NULL CHECK (max_delivery_distance_km >= 0)
+);
+
+COMMENT ON TABLE product_delivery_rules IS 'Product delivery constraints by Kapruka product type';
+
+-- ============================================================================
+-- LOGISTICS: DELIVERY HISTORY
+-- Historical delivery outcomes for district/product-level performance reasoning.
+-- ============================================================================
+
+CREATE TABLE IF NOT EXISTS delivery_history (
+    order_id TEXT PRIMARY KEY,
+    district TEXT NOT NULL REFERENCES delivery_zones(district)
+        ON UPDATE CASCADE ON DELETE RESTRICT,
+    product_type TEXT NOT NULL REFERENCES product_delivery_rules(product_type)
+        ON UPDATE CASCADE ON DELETE RESTRICT,
+    delivery_time_minutes INTEGER NOT NULL CHECK (delivery_time_minutes >= 0),
+    status TEXT NOT NULL CHECK (status IN ('delivered', 'delayed', 'failed', 'cancelled')),
+    customer_rating REAL NOT NULL CHECK (customer_rating >= 0 AND customer_rating <= 5)
+);
+
+CREATE INDEX IF NOT EXISTS idx_delivery_history_district
+ON delivery_history(district);
+
+CREATE INDEX IF NOT EXISTS idx_delivery_history_product_type
+ON delivery_history(product_type);
+
+CREATE INDEX IF NOT EXISTS idx_delivery_history_status
+ON delivery_history(status);
+
+COMMENT ON TABLE delivery_history IS 'Historical delivery outcomes used for logistics performance analysis';
 
 -- ============================================================================
 -- FOREIGN KEY RELATIONSHIPS
@@ -412,7 +528,7 @@ END $$;
 -- Kapruka product metadata should be crawled into catalog.json.
 -- Each product should then be embedded and stored in Qdrant.
 -- Qdrant acts as the RAG knowledge base for semantic product retrieval.
--- Supabase is used here for user CRM and cognitive memory only.
+-- Supabase is used here for user CRM, logistics reference data, and cognitive memory.
 -- ============================================================================
 
 -- ============================================================================
@@ -513,9 +629,24 @@ LEFT JOIN v_active_facts f ON u.user_id = f.user_id
 LEFT JOIN v_episode_stats e ON u.user_id = e.user_id
 WHERE u.active = TRUE;
 
+CREATE OR REPLACE VIEW v_delivery_history_stats AS
+SELECT
+    district,
+    product_type,
+    COUNT(*) AS total_orders,
+    AVG(delivery_time_minutes)::REAL AS avg_delivery_time_minutes,
+    AVG(customer_rating)::REAL AS avg_customer_rating,
+    COUNT(*) FILTER (WHERE status = 'delivered') AS delivered_count,
+    COUNT(*) FILTER (WHERE status = 'delayed') AS delayed_count,
+    COUNT(*) FILTER (WHERE status = 'failed') AS failed_count,
+    COUNT(*) FILTER (WHERE status = 'cancelled') AS cancelled_count
+FROM delivery_history
+GROUP BY district, product_type;
+
 COMMENT ON VIEW v_active_facts IS 'Summary of active semantic facts per Kapruka user';
 COMMENT ON VIEW v_episode_stats IS 'Summary of episodic memory per Kapruka user';
 COMMENT ON VIEW v_user_memory_summary IS 'Combined CRM and memory summary for Kapruka users';
+COMMENT ON VIEW v_delivery_history_stats IS 'Aggregated delivery performance by district and product type';
 
 -- ============================================================================
 -- COMPLETION
@@ -524,11 +655,12 @@ COMMENT ON VIEW v_user_memory_summary IS 'Combined CRM and memory summary for Ka
 DO $$
 BEGIN
     RAISE NOTICE '✅ Kapruka Supabase schema created successfully!';
-    RAISE NOTICE '📊 CRM table created: users';
+    RAISE NOTICE '📊 CRM/logistics tables created: users, delivery_zones, delivery_slots, courier_profiles, product_delivery_rules, delivery_history';
     RAISE NOTICE '🧠 Memory tables created: st_turns, mem_facts, mem_episodes, mem_procedures';
     RAISE NOTICE '🔍 pgvector indexes created with IVFFlat cosine similarity';
     RAISE NOTICE '📝 Embedding model: text-embedding-3-small (1536 dims)';
     RAISE NOTICE '📦 Product catalog storage: Qdrant RAG knowledge base, not Supabase';
     RAISE NOTICE '🔒 RLS enabled for user-owned memory and CRM user profile data';
+    RAISE NOTICE '🚚 Structured logistics reference data is expected from JSON-backed seed assets';
     RAISE NOTICE '🎯 Ready for Kapruka Gift-Concierge Agent development!';
 END $$;
