@@ -23,6 +23,13 @@ from infrastructure.config import (
 )
 
 
+def _normalize_model_name(model: str, provider: str) -> str:
+    """Normalize provider-qualified model IDs for direct provider clients."""
+    if provider == "openai" and model.startswith("openai/"):
+        return model.split("/", 1)[1]
+    return model
+
+
 def _build_llm(
     model: str,
     provider: str,
@@ -33,7 +40,7 @@ def _build_llm(
 ) -> ChatOpenAI:
     """Internal factory — builds a ChatOpenAI for any provider."""
     llm_kwargs: dict[str, Any] = dict(
-        model=model,
+        model=_normalize_model_name(model, provider),
         temperature=temperature,
         streaming=streaming,
         max_tokens=max_tokens,

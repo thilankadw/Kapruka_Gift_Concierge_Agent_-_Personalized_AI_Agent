@@ -10,6 +10,13 @@ from langchain_openai import OpenAIEmbeddings
 from infrastructure.config import EMBEDDING_MODEL, PROVIDER, OPENROUTER_BASE_URL, get_api_key
 
 
+def _normalize_embedding_model_name(model: str, provider: str) -> str:
+    """Normalize provider-qualified embedding IDs for direct provider clients."""
+    if provider == "openai" and model.startswith("openai/"):
+        return model.split("/", 1)[1]
+    return model
+
+
 def get_default_embeddings(
     batch_size: int = 100,
     show_progress: bool = False,
@@ -30,7 +37,7 @@ def get_default_embeddings(
         A ready-to-use OpenAIEmbeddings instance.
     """
     llm_kwargs: dict[str, Any] = dict(
-        model=EMBEDDING_MODEL,
+        model=_normalize_embedding_model_name(EMBEDDING_MODEL, PROVIDER),
         show_progress_bar=show_progress,
         **kwargs,
     )

@@ -27,7 +27,7 @@ LANGFUSE_PROMPT_NAMES = {
     "synthesiser_system": "kapruka-synthesiser-system",
     "synthesiser_user": "kapruka-synthesiser-user",
     "admin_agent": "kapruka-admin-agent",
-    "clinical_agent": "kapruka-clinical-agent",
+    "clinical_agent": "kapruka-catalog-agent",
     "direct_agent": "kapruka-direct-agent",
     "merge_synthesiser": "kapruka-merge-synthesiser",
 }
