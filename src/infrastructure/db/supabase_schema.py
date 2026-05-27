@@ -19,7 +19,7 @@ def generate_supabase_schema() -> str:
 
     return f"""-- ============================================================================
 -- Supabase Schema: Kapruka Gift-Concierge Agent
--- Memory System + Minimal CRM
+-- Memory System + CRM + Logistics Reference Data
 -- PostgreSQL 15+ with pgvector extension
 -- ============================================================================
 --
@@ -28,7 +28,7 @@ def generate_supabase_schema() -> str:
 -- Vector Dimensions: {EMBEDDING_DIM}
 --
 -- Product catalog RAG documents are stored in Qdrant, not Supabase.
--- Supabase stores agent memory and minimal user CRM data.
+-- Supabase stores agent memory, user CRM data, and structured logistics data.
 --
 -- ============================================================================
 
@@ -279,7 +279,7 @@ COMMENT ON TABLE mem_procedures IS 'Procedural memory for Kapruka agent workflow
 
 -- ============================================================================
 -- CRM: USERS
--- Minimal CRM table for Kapruka customers.
+-- Core CRM table for Kapruka customers.
 -- Detailed preferences are stored as semantic facts in mem_facts.
 -- Product catalog data is stored in Qdrant.
 -- ============================================================================
@@ -289,13 +289,18 @@ CREATE TABLE IF NOT EXISTS users (
     external_user_id TEXT UNIQUE,
     full_name TEXT,
     phone TEXT,
-    email TEXT,
+    email TEXT UNIQUE,
     district TEXT,
+    province TEXT,
+    address TEXT,
     notes TEXT,
     active BOOLEAN NOT NULL DEFAULT TRUE,
     created_at INTEGER NOT NULL,
     updated_at INTEGER NOT NULL
 );
+
+ALTER TABLE users ADD COLUMN IF NOT EXISTS province TEXT;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS address TEXT;
 
 DO $$
 BEGIN
@@ -331,7 +336,118 @@ ON users(email);
 CREATE INDEX IF NOT EXISTS idx_users_district
 ON users(district);
 
-COMMENT ON TABLE users IS 'Minimal Kapruka CRM user profiles. Preferences live in mem_facts.';
+COMMENT ON TABLE users IS 'Kapruka CRM user profiles. Preferences live in mem_facts.';
+COMMENT ON COLUMN users.province IS 'Optional province for the user delivery profile';
+COMMENT ON COLUMN users.address IS 'Optional delivery address or address note';
+
+-- ============================================================================
+-- LOGISTICS: DELIVERY ZONES
+-- Structured district-level delivery configuration sourced from JSON assets.
+-- ============================================================================
+
+CREATE TABLE IF NOT EXISTS delivery_zones (
+    district TEXT PRIMARY KEY,
+    delivery_available BOOLEAN NOT NULL,
+    same_day BOOLEAN NOT NULL,
+    express_available BOOLEAN NOT NULL,
+    minimum_notice_hours INTEGER NOT NULL CHECK (minimum_notice_hours >= 0),
+    max_daily_orders INTEGER NOT NULL CHECK (max_daily_orders >= 0),
+    active_couriers INTEGER NOT NULL CHECK (active_couriers >= 0)
+);
+
+COMMENT ON TABLE delivery_zones IS 'District-level delivery coverage and capacity configuration for Kapruka logistics';
+
+-- ============================================================================
+-- LOGISTICS: DELIVERY SLOTS
+-- Slot-level delivery availability by district.
+-- ============================================================================
+
+CREATE TABLE IF NOT EXISTS delivery_slots (
+    district TEXT NOT NULL REFERENCES delivery_zones(district)
+        ON UPDATE CASCADE ON DELETE CASCADE,
+    slot TEXT NOT NULL,
+    capacity INTEGER NOT NULL CHECK (capacity >= 0),
+    available BOOLEAN NOT NULL,
+    PRIMARY KEY (district, slot)
+);
+
+CREATE INDEX IF NOT EXISTS idx_delivery_slots_district
+ON delivery_slots(district);
+
+CREATE INDEX IF NOT EXISTS idx_delivery_slots_available
+ON delivery_slots(available);
+
+COMMENT ON TABLE delivery_slots IS 'Delivery slot capacity and availability by district';
+
+-- ============================================================================
+-- LOGISTICS: COURIER PROFILES
+-- Courier capacity and assignment metadata by district.
+-- ============================================================================
+
+CREATE TABLE IF NOT EXISTS courier_profiles (
+    courier_id TEXT PRIMARY KEY,
+    name TEXT NOT NULL,
+    district TEXT NOT NULL REFERENCES delivery_zones(district)
+        ON UPDATE CASCADE ON DELETE RESTRICT,
+    vehicle_type TEXT NOT NULL,
+    availability BOOLEAN NOT NULL,
+    max_deliveries_per_day INTEGER NOT NULL CHECK (max_deliveries_per_day >= 0),
+    rating REAL NOT NULL CHECK (rating >= 0 AND rating <= 5)
+);
+
+CREATE INDEX IF NOT EXISTS idx_courier_profiles_district
+ON courier_profiles(district);
+
+CREATE INDEX IF NOT EXISTS idx_courier_profiles_availability
+ON courier_profiles(availability);
+
+CREATE INDEX IF NOT EXISTS idx_courier_profiles_vehicle_type
+ON courier_profiles(vehicle_type);
+
+COMMENT ON TABLE courier_profiles IS 'Courier profiles used for delivery planning and capacity reasoning';
+
+-- ============================================================================
+-- LOGISTICS: PRODUCT DELIVERY RULES
+-- Product-level delivery constraints sourced from structured JSON data.
+-- ============================================================================
+
+CREATE TABLE IF NOT EXISTS product_delivery_rules (
+    product_type TEXT PRIMARY KEY,
+    fragile BOOLEAN NOT NULL,
+    temperature_control_required BOOLEAN NOT NULL,
+    same_day_allowed BOOLEAN NOT NULL,
+    minimum_notice_hours INTEGER NOT NULL CHECK (minimum_notice_hours >= 0),
+    max_delivery_distance_km INTEGER NOT NULL CHECK (max_delivery_distance_km >= 0)
+);
+
+COMMENT ON TABLE product_delivery_rules IS 'Product delivery constraints by Kapruka product type';
+
+-- ============================================================================
+-- LOGISTICS: DELIVERY HISTORY
+-- Historical delivery outcomes for district/product-level performance reasoning.
+-- ============================================================================
+
+CREATE TABLE IF NOT EXISTS delivery_history (
+    order_id TEXT PRIMARY KEY,
+    district TEXT NOT NULL REFERENCES delivery_zones(district)
+        ON UPDATE CASCADE ON DELETE RESTRICT,
+    product_type TEXT NOT NULL REFERENCES product_delivery_rules(product_type)
+        ON UPDATE CASCADE ON DELETE RESTRICT,
+    delivery_time_minutes INTEGER NOT NULL CHECK (delivery_time_minutes >= 0),
+    status TEXT NOT NULL CHECK (status IN ('delivered', 'delayed', 'failed', 'cancelled')),
+    customer_rating REAL NOT NULL CHECK (customer_rating >= 0 AND customer_rating <= 5)
+);
+
+CREATE INDEX IF NOT EXISTS idx_delivery_history_district
+ON delivery_history(district);
+
+CREATE INDEX IF NOT EXISTS idx_delivery_history_product_type
+ON delivery_history(product_type);
+
+CREATE INDEX IF NOT EXISTS idx_delivery_history_status
+ON delivery_history(status);
+
+COMMENT ON TABLE delivery_history IS 'Historical delivery outcomes used for logistics performance analysis';
 
 -- ============================================================================
 -- FOREIGN KEY RELATIONSHIPS
@@ -477,6 +593,20 @@ LEFT JOIN mem_facts f ON f.user_id = u.user_id
 LEFT JOIN mem_episodes e ON e.user_id = u.user_id
 GROUP BY u.user_id, u.full_name, u.phone, u.email, u.district;
 
+CREATE OR REPLACE VIEW v_delivery_history_stats AS
+SELECT
+    district,
+    product_type,
+    COUNT(*) AS total_orders,
+    AVG(delivery_time_minutes)::REAL AS avg_delivery_time_minutes,
+    AVG(customer_rating)::REAL AS avg_customer_rating,
+    COUNT(*) FILTER (WHERE status = 'delivered') AS delivered_count,
+    COUNT(*) FILTER (WHERE status = 'delayed') AS delayed_count,
+    COUNT(*) FILTER (WHERE status = 'failed') AS failed_count,
+    COUNT(*) FILTER (WHERE status = 'cancelled') AS cancelled_count
+FROM delivery_history
+GROUP BY district, product_type;
+
 -- ============================================================================
 -- DOCUMENTATION
 -- ============================================================================
@@ -484,10 +614,16 @@ GROUP BY u.user_id, u.full_name, u.phone, u.email, u.district;
 COMMENT ON TABLE mem_facts IS 'Long-term semantic memory facts with pgvector embeddings';
 COMMENT ON TABLE mem_episodes IS 'Long-term episodic memory with pgvector summaries';
 COMMENT ON TABLE users IS 'Kapruka Gift-Concierge CRM users';
+COMMENT ON TABLE delivery_zones IS 'District-level logistics availability and capacity';
+COMMENT ON TABLE delivery_slots IS 'Delivery slot availability by district';
+COMMENT ON TABLE courier_profiles IS 'Courier roster and capacity by district';
+COMMENT ON TABLE product_delivery_rules IS 'Product-type delivery constraints';
+COMMENT ON TABLE delivery_history IS 'Historical delivery performance records';
 
 COMMENT ON FUNCTION search_mem_facts IS 'Semantic search over memory facts using cosine similarity';
 COMMENT ON FUNCTION search_mem_episodes IS 'Semantic search over episode summaries using cosine similarity';
 COMMENT ON FUNCTION search_mem_procedures IS 'Semantic search over procedural memory using cosine similarity';
+COMMENT ON VIEW v_delivery_history_stats IS 'Aggregated delivery performance by district and product type';
 
 -- ============================================================================
 -- COMPLETION
@@ -496,11 +632,11 @@ COMMENT ON FUNCTION search_mem_procedures IS 'Semantic search over procedural me
 DO $$
 BEGIN
     RAISE NOTICE '✅ Kapruka Supabase schema created successfully!';
-    RAISE NOTICE '📊 Tables created: st_turns, mem_facts, mem_episodes, mem_procedures, users';
+    RAISE NOTICE '📊 Tables created: st_turns, mem_facts, mem_episodes, mem_procedures, users, delivery_zones, delivery_slots, courier_profiles, product_delivery_rules, delivery_history';
     RAISE NOTICE '🔍 pgvector indexes created with IVFFlat cosine similarity';
     RAISE NOTICE '📝 Model: {EMBEDDING_MODEL} ({EMBEDDING_DIM} dims)';
     RAISE NOTICE '🔒 RLS enabled for memory tables and users table';
-    RAISE NOTICE '💾 CRM: minimal users table only';
+    RAISE NOTICE '💾 CRM + logistics reference data ready';
     RAISE NOTICE '🧠 Memory types: Short-term, Semantic, Episodic, Procedural';
     RAISE NOTICE '🎁 Product catalog RAG store: Qdrant';
 END $$;

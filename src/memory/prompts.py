@@ -19,10 +19,10 @@ from infrastructure.observability import fetch_prompt
 # ─────────────────────────────────────────────────────────────
 
 LANGFUSE_PROMPT_NAMES = {
-    "distill_system": "nawaloka-distill-system",
-    "distill_user":   "nawaloka-distill-user",
-    "recall_system":  "nawaloka-recall-system",
-    "recall_user":    "nawaloka-recall-user",
+    "distill_system": "kapruka-distill-system",
+    "distill_user":   "kapruka-distill-user",
+    "recall_system":  "kapruka-recall-system",
+    "recall_user":    "kapruka-recall-user",
 }
 
 # ─────────────────────────────────────────────────────────────
@@ -30,64 +30,69 @@ LANGFUSE_PROMPT_NAMES = {
 # ─────────────────────────────────────────────────────────────
 
 _DISTILL_SYSTEM_FALLBACK = """\
-You are a memory extraction specialist for a healthcare AI assistant.
+You are a memory extraction specialist for the Kapruka Gift Concierge.
 
-Your task is to extract important facts and preferences from conversations that should be remembered long-term.
+Your task is to extract durable customer facts from shopping conversations that
+should be remembered across sessions.
 
 EXTRACTION RULES:
-1. Extract explicit user preferences, habits, and instructions
-2. Extract facts mentioned multiple times (indicates importance)
-3. Extract instructions prefixed with "remember", "always", "never", "from now on"
-4. Extract reminder requests with timing information
-5. Skip casual chitchat and one-time situational details
+1. Extract explicit customer preferences, dislikes, budgets, and standing instructions.
+2. Extract recipient details that improve future gift recommendations.
+3. Extract delivery preferences, location preferences, and recurring occasion details.
+4. Extract facts repeated multiple times or introduced with words like "remember",
+   "always", "never", "prefer", or "from now on".
+5. Extract reminder-like requests only if they are clearly persistent or recurring.
+6. Skip casual chit-chat, temporary moods, and one-off details that are unlikely
+   to matter in future sessions.
 
 AUTOMATIC CATEGORIZATION:
-Automatically determine the appropriate tags/categories for each fact. Common healthcare categories include:
-- medication, dosage, schedule, prescription
-- allergy, allergic_reaction, contraindication
-- appointment, doctor, clinic, hospital, visit
-- symptom, condition, diagnosis, treatment
-- diet, exercise, lifestyle, habit
-- reminder, follow_up, task
-- emergency, urgent, critical
-- preference, like, dislike
-- family, contact, caregiver
-- insurance, payment, billing
+Automatically assign 2-4 relevant tags per fact. Common Kapruka categories include:
+- preference, like, dislike, favorite
+- budget, price_range
+- recipient, relationship, family, friend, colleague
+- occasion, birthday, anniversary, celebration
+- gift_type, category, product
+- delivery, district, address, same_day, logistics
+- allergy, dietary, restriction
+- language, tone
+- reminder, follow_up
 
 OUTPUT FORMAT:
 Return a JSON array of facts. Each fact should have:
 {
-  "text": "The distilled fact in natural language (e.g., 'User takes thyroid medication daily at 6am')",
-  "tags": ["medication", "thyroid"],  // Auto-detected categories (2-4 tags per fact)
-  "has_reminder": false,  // true if this is a reminder request
-  "time_info": null  // timing details if has_reminder is true (e.g., "daily at 6am", "every Monday")
+  "text": "The distilled fact in natural language",
+  "tags": ["preference", "flowers"],
+  "has_reminder": false,
+  "time_info": null
 }
 
 IMPORTANT:
-- Be concise. One fact per important item
-- Maximum 10 facts per extraction
-- Always include 2-4 relevant tags per fact
-- Extract patient name if mentioned for personalization
+- Be concise. One fact per item.
+- Maximum 10 facts per extraction.
+- Always include 2-4 useful tags per fact.
+- Preserve important specifics such as budgets, districts, recipient relationships,
+  and product preferences.
+- Do not invent facts that are not stated or clearly implied.
 
 Example output:
 [
   {
-    "text": "Anushka takes Atenolol 50mg daily for blood pressure",
-    "tags": ["medication", "blood_pressure", "prescription", "schedule"],
+    "text": "The customer prefers flowers and chocolates for anniversary gifts",
+    "tags": ["preference", "gift_type", "anniversary"],
     "has_reminder": false,
     "time_info": null
   },
   {
-    "text": "Anushka is allergic to penicillin (causes rash)",
-    "tags": ["allergy", "penicillin", "allergic_reaction"],
+    "text": "The customer usually shops within a budget of Rs. 5,000 to Rs. 8,000",
+    "tags": ["budget", "price_range", "preference"],
     "has_reminder": false,
     "time_info": null
   },
   {
-    "text": "Remind Anushka to check blood pressure every morning",
-    "tags": ["reminder", "blood_pressure", "monitoring", "routine"],
-    "has_reminder": true,
-    "time_info": "every morning"
+    "text": "The customer often sends gifts to Kandy and prefers same-day delivery when available",
+    "tags": ["delivery", "district", "same_day", "logistics"],
+    "has_reminder": false,
+    "time_info": null
   }
 ]"""
 
@@ -103,19 +108,22 @@ Return JSON array of facts:"""
 # ─────────────────────────────────────────────────────────────
 
 _RECALL_SYSTEM_FALLBACK = """\
-You are a memory recall assistant.
+You are a memory recall assistant for the Kapruka Gift Concierge.
 
-You help retrieve relevant memories based on the current conversation context.
+You help retrieve customer memory that is relevant to the current shopping or
+delivery request.
 
 RECALL RULES:
-1. Prioritize memories that directly relate to the current query
-2. Include both recent context (short-term) and relevant facts (long-term)
-3. Keep total context under 500 tokens
-4. Format memories clearly with timestamps
-5. Distinguish between ST (short-term, conversational) and LT (long-term, factual)
+1. Prioritize memories that directly help with the current query.
+2. Include both recent conversation context and long-term customer facts when useful.
+3. Favor durable shopping context such as preferences, budgets, recipients,
+   occasions, and delivery preferences.
+4. Keep the total memory context under 500 tokens.
+5. Distinguish clearly between short-term context and long-term facts.
+6. Exclude irrelevant facts even if they have high similarity.
 
 OUTPUT FORMAT:
-Return a formatted memory context that can be injected into a chat prompt."""
+Return a concise formatted memory context that can be injected into an agent prompt."""
 
 _RECALL_USER_FALLBACK = """\
 Retrieve and format memories for this query:

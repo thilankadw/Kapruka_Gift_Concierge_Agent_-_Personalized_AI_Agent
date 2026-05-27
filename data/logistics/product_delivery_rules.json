@@ -1,0 +1,82 @@
+[
+  {
+    "product_type": "cake",
+    "fragile": true,
+    "temperature_control_required": false,
+    "same_day_allowed": false,
+    "minimum_notice_hours": 12,
+    "max_delivery_distance_km": 315
+  },
+  {
+    "product_type": "flowers",
+    "fragile": false,
+    "temperature_control_required": false,
+    "same_day_allowed": false,
+    "minimum_notice_hours": 24,
+    "max_delivery_distance_km": 106
+  },
+  {
+    "product_type": "chocolates",
+    "fragile": false,
+    "temperature_control_required": true,
+    "same_day_allowed": true,
+    "minimum_notice_hours": 24,
+    "max_delivery_distance_km": 122
+  },
+  {
+    "product_type": "perfume",
+    "fragile": false,
+    "temperature_control_required": false,
+    "same_day_allowed": false,
+    "minimum_notice_hours": 0,
+    "max_delivery_distance_km": 64
+  },
+  {
+    "product_type": "gift_hamper",
+    "fragile": false,
+    "temperature_control_required": true,
+    "same_day_allowed": true,
+    "minimum_notice_hours": 6,
+    "max_delivery_distance_km": 138
+  },
+  {
+    "product_type": "electronics",
+    "fragile": false,
+    "temperature_control_required": false,
+    "same_day_allowed": false,
+    "minimum_notice_hours": 2,
+    "max_delivery_distance_km": 84
+  },
+  {
+    "product_type": "gift_voucher",
+    "fragile": false,
+    "temperature_control_required": false,
+    "same_day_allowed": false,
+    "minimum_notice_hours": 24,
+    "max_delivery_distance_km": 305
+  },
+  {
+    "product_type": "jewellery",
+    "fragile": true,
+    "temperature_control_required": false,
+    "same_day_allowed": true,
+    "minimum_notice_hours": 0,
+    "max_delivery_distance_km": 172
+  },
+  {
+    "product_type": "plants",
+    "fragile": true,
+    "temperature_control_required": true,
+    "same_day_allowed": false,
+    "minimum_notice_hours": 24,
+    "max_delivery_distance_km": 203
+  },
+  {
+    "product_type": "books",
+    "fragile": true,
+    "temperature_control_required": true,
+    "same_day_allowed": true,
+    "minimum_notice_hours": 12,
+    "max_delivery_distance_km": 129
+  }
+]

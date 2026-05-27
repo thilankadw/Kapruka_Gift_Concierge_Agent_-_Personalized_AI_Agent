@@ -26,8 +26,8 @@ help:
 	@echo "  make qdrant-info          Show Qdrant collection stats"
 	@echo ""
 	@echo "🤖 CRM DATA GENERATION (LLM-Powered)"
-	@echo "  make seed-crm-large       Small dataset: 10 doctors, 20 patients (~30s)"
-	@echo "  make seed-crm-xl          Large dataset: 50 doctors, 200 patients (~2min)"
+	@echo "  make seed-crm-large       Small dataset: 20 users + logistics JSON (~30s)"
+	@echo "  make seed-crm-xl          Large dataset: 200 users + logistics JSON (~2min)"
 	@echo "  make seed-crm-no-llm      Template mode (free, instant, no API)"
 	@echo "  make seed-procedures      Seed procedural memory workflows"
 	@echo ""
@@ -68,8 +68,9 @@ init-supabase:
 	@echo "📊 This will create:"
 	@echo "   ✅ mem_facts (Long-term semantic memory + pgvector)"
 	@echo "   ✅ mem_episodes (Long-term episodic memory + pgvector)"
-	@echo "   ✅ locations, specialties, doctors"
-	@echo "   ✅ patients, bookings"
+	@echo "   ✅ users"
+	@echo "   ✅ delivery_zones, delivery_slots"
+	@echo "   ✅ courier_profiles, product_delivery_rules, delivery_history"
 	@echo "   ✅ pgvector indexes (IVFFlat)"
 	@echo "   ✅ Helper functions for semantic search"
 	@echo "   ✅ Row Level Security (RLS) policies"
@@ -94,7 +95,7 @@ ingest-qdrant:
 	@echo "╚════════════════════════════════════════════════════════════════╝"
 	@echo ""
 	@echo "⚙️  Configuration:"
-	@echo "   - Source: data/knowledge_base/ (internal hospital docs)"
+	@echo "   - Source: data/kapruka_markdown/ (internal Kapruka product docs)"
 	@echo "   - Strategy: parent_child (children indexed, parents for context)"
 	@echo "   - RAG type: CAG (Cache-Augmented Generation)"
 	@echo ""
@@ -122,19 +123,13 @@ seed-crm-large:
 	@echo "║  🤖 Seeding CRM — Supabase (Small)                            ║"
 	@echo "╚════════════════════════════════════════════════════════════════╝"
 	@echo ""
-	@echo "⚙️  Config: LLM mode | 10 doctors | 20 patients | ~30s | ~$$0.01"
+	@echo "⚙️  Config: LLM mode | 20 users | logistics JSON | ~30s | ~$$0.01"
 	@echo ""
 	@PYTHONPATH=src python scripts/seed_crm_unified.py \
 		--mode llm \
 		--storage database \
-		--n-doctors 10 \
-		--n-patients 20 \
-		--n-specialties 7 \
-		--n-locations 4 \
-		--n-slots-per-doctor 15 \
-		--start 2025-11-03 \
+		--n-users 20 \
 		--tz Asia/Colombo \
-		--no-overlap \
 		--rand-seed 42
 
 seed-crm-xl:
@@ -142,19 +137,13 @@ seed-crm-xl:
 	@echo "║  🚀 Seeding CRM — Supabase (Large)                            ║"
 	@echo "╚════════════════════════════════════════════════════════════════╝"
 	@echo ""
-	@echo "⚙️  Config: LLM mode | 50 doctors | 200 patients | ~2min | ~$$0.05"
+	@echo "⚙️  Config: LLM mode | 200 users | logistics JSON | ~2min | ~$$0.05"
 	@echo ""
 	@PYTHONPATH=src python scripts/seed_crm_unified.py \
 		--mode llm \
 		--storage database \
-		--n-doctors 50 \
-		--n-patients 200 \
-		--n-specialties 10 \
-		--n-locations 4 \
-		--n-slots-per-doctor 30 \
-		--start 2025-11-01 \
+		--n-users 200 \
 		--tz Asia/Colombo \
-		--no-overlap \
 		--rand-seed 42
 
 seed-crm-no-llm:
@@ -163,14 +152,8 @@ seed-crm-no-llm:
 	@PYTHONPATH=src python scripts/seed_crm_unified.py \
 		--mode template \
 		--storage database \
-		--n-doctors 25 \
-		--n-patients 100 \
-		--n-specialties 7 \
-		--n-locations 4 \
-		--n-slots-per-doctor 20 \
-		--start 2025-11-03 \
+		--n-users 100 \
 		--tz Asia/Colombo \
-		--no-overlap \
 		--rand-seed 42
 
 seed-procedures:
@@ -189,7 +172,7 @@ query-crm:
 	@PYTHONPATH=src python -c "\
 from infrastructure.db import get_session; \
 from sqlalchemy import text; \
-tables = ['locations', 'specialties', 'doctors', 'patients', 'bookings']; \
+tables = ['users', 'delivery_zones', 'delivery_slots', 'courier_profiles', 'product_delivery_rules', 'delivery_history']; \
 session = get_session(); \
 print('📊 Table Counts:'); \
 [print(f'  {t:15s} {session.execute(text(f\"SELECT COUNT(*) FROM {t}\")).scalar():>6}') for t in tables]; \

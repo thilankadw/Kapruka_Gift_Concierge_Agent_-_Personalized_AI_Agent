@@ -6,12 +6,7 @@ CONFIGURATION POLICY:
 Configuration is loaded from config/param.yaml and config/models.yaml.
 Secrets (API keys) live ONLY in .env and are loaded via os.getenv().
 
-Supports multiple LLM providers via OpenRouter unified API or direct providers:
-- OpenRouter (unified multi-provider access)
-- OpenAI (direct)
-- Anthropic (direct)
-- Google/Gemini (direct)
-- Groq (direct)
+This project is currently pinned to OpenAI for the default provider path.
 """
 
 from pathlib import Path
@@ -59,7 +54,7 @@ _MODELS = _load_yaml("models.yaml")
 # Provider Configuration
 # ========================================
 
-PROVIDER = _get_nested(_PARAMS, "provider", "default", default="openai")
+PROVIDER = "openai"
 MODEL_TIER = _get_nested(_PARAMS, "provider", "tier", default="general")
 OPENROUTER_BASE_URL = _get_nested(_PARAMS, "provider", "openrouter_base_url",
                                    default="https://openrouter.ai/api/v1")
@@ -105,15 +100,15 @@ def get_embedding_model(provider: Optional[str] = None, tier: Optional[str] = No
 #   Extraction: llama-3.1-8b    — ultra-fast via Groq, structured output
 #   Chat:       gemini-2.0-flash — high quality synthesis, generous context
 
-ROUTER_MODEL = "openai/gpt-4o-mini"
-ROUTER_PROVIDER = "openrouter"
+ROUTER_MODEL = "gpt-4o-mini"
+ROUTER_PROVIDER = "openai"
 
-EXTRACTOR_MODEL = "llama-3.1-8b-instant"
-EXTRACTOR_PROVIDER = "groq"
+EXTRACTOR_MODEL = "gpt-4o-mini"
+EXTRACTOR_PROVIDER = "openai"
 GROQ_BASE_URL = "https://api.groq.com/openai/v1"
 
-CHAT_MODEL = "google/gemini-2.5-flash"
-CHAT_PROVIDER = "openrouter"
+CHAT_MODEL = "gpt-4o-mini"
+CHAT_PROVIDER = "openai"
 
 EMBEDDING_MODEL = get_embedding_model()
 

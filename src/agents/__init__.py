@@ -1,25 +1,23 @@
 """
-Agent package exports for Kapruka tools.
+Agentic Routing Engine — the core agent module.
+
+Public API:
+    build_agent()        → AgentOrchestrator (fully wired, ready to chat)
+    AgentOrchestrator    → main orchestrator class
+    AgentResponse        → response dataclass
+    QueryRouter          → intent classifier
+    RouteDecision        → single routing result dataclass
+    MultiRouteDecision   → multi-route container (fan-out support)
 """
 
-from typing import TYPE_CHECKING
-
-if TYPE_CHECKING:
-    from .tools import CRMTool, RAGTool
+from .orchestrator import AgentOrchestrator, AgentResponse, build_agent
+from .router import QueryRouter, RouteDecision, MultiRouteDecision
 
 __all__ = [
-    "CRMTool",
-    "RAGTool",
+    "AgentOrchestrator",
+    "AgentResponse",
+    "QueryRouter",
+    "RouteDecision",
+    "MultiRouteDecision",
+    "build_agent",
 ]
-
-
-def __getattr__(name: str):
-    if name == "CRMTool":
-        from .tools import CRMTool
-
-        return CRMTool
-    if name == "RAGTool":
-        from .tools import RAGTool
-
-        return RAGTool
-    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")

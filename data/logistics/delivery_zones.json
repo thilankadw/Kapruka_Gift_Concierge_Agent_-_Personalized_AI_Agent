@@ -1,0 +1,227 @@
+[
+  {
+    "district": "Colombo",
+    "delivery_available": true,
+    "same_day": false,
+    "express_available": true,
+    "minimum_notice_hours": 24,
+    "max_daily_orders": 917,
+    "active_couriers": 88
+  },
+  {
+    "district": "Gampaha",
+    "delivery_available": true,
+    "same_day": true,
+    "express_available": false,
+    "minimum_notice_hours": 2,
+    "max_daily_orders": 908,
+    "active_couriers": 405
+  },
+  {
+    "district": "Kalutara",
+    "delivery_available": true,
+    "same_day": true,
+    "express_available": true,
+    "minimum_notice_hours": 12,
+    "max_daily_orders": 837,
+    "active_couriers": 299
+  },
+  {
+    "district": "Kandy",
+    "delivery_available": true,
+    "same_day": false,
+    "express_available": false,
+    "minimum_notice_hours": 6,
+    "max_daily_orders": 398,
+    "active_couriers": 462
+  },
+  {
+    "district": "Matale",
+    "delivery_available": true,
+    "same_day": true,
+    "express_available": false,
+    "minimum_notice_hours": 6,
+    "max_daily_orders": 353,
+    "active_couriers": 491
+  },
+  {
+    "district": "Nuwara Eliya",
+    "delivery_available": true,
+    "same_day": true,
+    "express_available": false,
+    "minimum_notice_hours": 4,
+    "max_daily_orders": 1866,
+    "active_couriers": 439
+  },
+  {
+    "district": "Galle",
+    "delivery_available": true,
+    "same_day": true,
+    "express_available": false,
+    "minimum_notice_hours": 6,
+    "max_daily_orders": 1439,
+    "active_couriers": 12
+  },
+  {
+    "district": "Matara",
+    "delivery_available": false,
+    "same_day": false,
+    "express_available": true,
+    "minimum_notice_hours": 24,
+    "max_daily_orders": 1265,
+    "active_couriers": 34
+  },
+  {
+    "district": "Hambantota",
+    "delivery_available": true,
+    "same_day": false,
+    "express_available": true,
+    "minimum_notice_hours": 6,
+    "max_daily_orders": 1249,
+    "active_couriers": 121
+  },
+  {
+    "district": "Jaffna",
+    "delivery_available": true,
+    "same_day": false,
+    "express_available": false,
+    "minimum_notice_hours": 2,
+    "max_daily_orders": 101,
+    "active_couriers": 16
+  },
+  {
+    "district": "Kilinochchi",
+    "delivery_available": true,
+    "same_day": false,
+    "express_available": false,
+    "minimum_notice_hours": 2,
+    "max_daily_orders": 1270,
+    "active_couriers": 412
+  },
+  {
+    "district": "Mannar",
+    "delivery_available": false,
+    "same_day": true,
+    "express_available": true,
+    "minimum_notice_hours": 12,
+    "max_daily_orders": 1108,
+    "active_couriers": 153
+  },
+  {
+    "district": "Vavuniya",
+    "delivery_available": true,
+    "same_day": false,
+    "express_available": true,
+    "minimum_notice_hours": 24,
+    "max_daily_orders": 1661,
+    "active_couriers": 409
+  },
+  {
+    "district": "Mullaitivu",
+    "delivery_available": true,
+    "same_day": false,
+    "express_available": false,
+    "minimum_notice_hours": 24,
+    "max_daily_orders": 150,
+    "active_couriers": 339
+  },
+  {
+    "district": "Batticaloa",
+    "delivery_available": false,
+    "same_day": false,
+    "express_available": true,
+    "minimum_notice_hours": 24,
+    "max_daily_orders": 198,
+    "active_couriers": 340
+  },
+  {
+    "district": "Ampara",
+    "delivery_available": true,
+    "same_day": true,
+    "express_available": false,
+    "minimum_notice_hours": 2,
+    "max_daily_orders": 397,
+    "active_couriers": 308
+  },
+  {
+    "district": "Trincomalee",
+    "delivery_available": true,
+    "same_day": true,
+    "express_available": false,
+    "minimum_notice_hours": 2,
+    "max_daily_orders": 1515,
+    "active_couriers": 232
+  },
+  {
+    "district": "Kurunegala",
+    "delivery_available": true,
+    "same_day": false,
+    "express_available": true,
+    "minimum_notice_hours": 4,
+    "max_daily_orders": 458,
+    "active_couriers": 97
+  },
+  {
+    "district": "Puttalam",
+    "delivery_available": true,
+    "same_day": false,
+    "express_available": true,
+    "minimum_notice_hours": 12,
+    "max_daily_orders": 306,
+    "active_couriers": 50
+  },
+  {
+    "district": "Anuradhapura",
+    "delivery_available": true,
+    "same_day": false,
+    "express_available": false,
+    "minimum_notice_hours": 4,
+    "max_daily_orders": 356,
+    "active_couriers": 430
+  },
+  {
+    "district": "Polonnaruwa",
+    "delivery_available": false,
+    "same_day": true,
+    "express_available": true,
+    "minimum_notice_hours": 2,
+    "max_daily_orders": 1206,
+    "active_couriers": 388
+  },
+  {
+    "district": "Badulla",
+    "delivery_available": true,
+    "same_day": false,
+    "express_available": true,
+    "minimum_notice_hours": 24,
+    "max_daily_orders": 978,
+    "active_couriers": 500
+  },
+  {
+    "district": "Monaragala",
+    "delivery_available": false,
+    "same_day": true,
+    "express_available": true,
+    "minimum_notice_hours": 24,
+    "max_daily_orders": 456,
+    "active_couriers": 268
+  },
+  {
+    "district": "Ratnapura",
+    "delivery_available": true,
+    "same_day": true,
+    "express_available": true,
+    "minimum_notice_hours": 4,
+    "max_daily_orders": 273,
+    "active_couriers": 367
+  },
+  {
+    "district": "Kegalle",
+    "delivery_available": true,
+    "same_day": false,
+    "express_available": false,
+    "minimum_notice_hours": 24,
+    "max_daily_orders": 1822,
+    "active_couriers": 261
+  }
+]
