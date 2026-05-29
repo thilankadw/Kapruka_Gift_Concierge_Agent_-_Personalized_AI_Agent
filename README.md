@@ -50,34 +50,7 @@ The core idea is simple: keep deterministic business data in SQL, keep fuzzy sem
 
 ## Architecture
 
-```mermaid
-flowchart LR
-    C[Client] --> API[FastAPI]
-    API --> G[LangGraph Orchestrator]
-
-    G --> R[recall]
-    R --> S[supervisor]
-
-    S --> P[profile_agent]
-    S --> K[catalog_agent]
-    S --> Q[concierge_agent]
-
-    P --> M[merge_responses]
-    K --> M
-    Q --> M
-    M --> W[save_memory]
-
-    R --> ST[st_turns<br/>Supabase]
-    R --> LT[mem_facts<br/>Supabase + pgvector]
-
-    P --> CRM[users + logistics tables]
-    K --> KB[Qdrant product KB]
-    K --> CACHE[Qdrant cag_cache]
-    Q --> WEB[Tavily]
-
-    INGEST[JSONL / Markdown / Crawl pipeline] --> KB
-    OBS[Langfuse] -. traces .-> G
-```
+![Kapruka system architecture](assets/kapruka_system_architecture.png)
 
 ## LangGraph Workflow
 
@@ -355,6 +328,21 @@ The Kapruka dataset is product-centric and fairly compact. Parent-child chunking
 
 The notebooks show the crawl process that produced the current dataset snapshot.
 
+## Database Schema
+
+![Supabase database schema](assets/supabase_schema.png)
+
+The database schema covers both the memory system and the operational CRM/logistics model:
+
+- conversation memory in `st_turns`
+- semantic memory in `mem_facts`
+- episodic memory in `mem_episodes`
+- procedural memory in `mem_procedures`
+- customer identity in `users`
+- delivery planning in `delivery_zones`, `delivery_slots`, and `courier_profiles`
+- product constraints in `product_delivery_rules`
+- historical fulfillment signals in `delivery_history`
+
 ## CRM and Logistics Layer
 
 The structured business-data path is intentionally relational.
@@ -493,8 +481,10 @@ The FastAPI app lives in `src/api/`.
   broader runtime and notebook dependency list.
 - `Makefile`
   workflow shortcuts for install, schema init, seeding, ingestion, status, and tests.
-- `assets/supabase-schema-hlrsemagjramzknjllnv.png`
-  visual schema reference.
+- `assets/kapruka_system_architecture.png`
+  system architecture diagram.
+- `assets/supabase_schema.png`
+  Supabase schema reference.
 
 ### Config
 
