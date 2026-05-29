@@ -226,6 +226,7 @@ def search_chunks(
         List of dicts with keys:
             chunk_text, url, title, strategy, chunk_index, score
     """
+    logger.info("Searching Chunks......................")
     client = get_qdrant_client()
 
     query_filter = None
@@ -244,8 +245,10 @@ def search_chunks(
         query=query_vector,
         query_filter=query_filter,
         limit=top_k,
-        score_threshold=score_threshold,
+        score_threshold=0.0,
+        # score_threshold=score_threshold,
     )
+    # logger.info("Number od points: {}", len(response.points))
 
     results = []
     for hit in response.points:
@@ -258,13 +261,16 @@ def search_chunks(
             "chunk_index": payload.get("chunk_index", 0),
             "score": hit.score,
         }
+    
         # Parent-child: include parent text for richer LLM context
         if "parent_text" in payload:
             result["parent_text"] = payload["parent_text"]
         if "parent_id" in payload:
             result["parent_id"] = payload["parent_id"]
         results.append(result)
-
+    print("=====================================================")
+    print(results)
+    print("=====================================================")
     return results
 
 
@@ -294,7 +300,7 @@ def collection_exists(collection_name: str = QDRANT_COLLECTION_NAME) -> bool:
 
 def ensure_kb_ingested(
     collection_name: str = QDRANT_COLLECTION_NAME,
-    source: str = "kb",
+    source: str = "jsonl",
     strategy: str = "parent_child",
 ) -> None:
     """

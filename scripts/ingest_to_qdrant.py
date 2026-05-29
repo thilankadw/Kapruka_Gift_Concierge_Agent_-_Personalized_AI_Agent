@@ -32,7 +32,7 @@ def main() -> None:
     parser.add_argument(
         "--strategy",
         choices=list(STRATEGY_MAP.keys()),
-        default="fixed",
+        default="parent_child",
         help="Chunking strategy (default: parent_child)",
     )
     parser.add_argument(

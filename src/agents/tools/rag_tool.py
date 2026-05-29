@@ -173,19 +173,21 @@ class RAGTool:
                 or hit.get("title")
                 or "Untitled product"
             )
-            price = hit.get("price") or "Price not available"
-            availability = hit.get("availability") or "Availability not available"
+            # price = hit.get("price") or "Price not available"
+            # availability = hit.get("availability") or "Availability not available"
             url = hit.get("url") or hit.get("product_url") or "N/A"
             text = hit.get("parent_text") or hit.get("chunk_text") or ""
 
             lines.append(f"\n--- Result {idx} (similarity {similarity}) ---")
             lines.append(f"Product: {title}")
-            lines.append(f"Price: {price}")
-            lines.append(f"Availability: {availability}")
+            # lines.append(f"Price: {price}")
+            # lines.append(f"Availability: {availability}")
             lines.append(f"URL: {url}")
             if text:
                 lines.append(text)
 
+        print("hiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiii")
+        logger.info("Extracted Results: \n {}", "\n".join(lines))
         return "\n".join(lines)
 
     def product_search(

@@ -153,7 +153,7 @@ def build_rag_chain(
     # BUILD THE CHAIN (Modern LCEL approach!)
     rag_chain = (
         RunnableParallel(
-            {"context": retriever | format_docs, "question": RunnablePassthrough()}
+            {"context": retriever , "question": RunnablePassthrough()}
         )
         | rag_prompt
         | llm

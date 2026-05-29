@@ -39,8 +39,8 @@ embedding:
 chunking:
   # Fixed-size chunking
   fixed:
-    chunk_size: 300
-    chunk_overlap: 0
+    chunk_size: 800
+    chunk_overlap: 50
   
   # Semantic chunking
   semantic:
