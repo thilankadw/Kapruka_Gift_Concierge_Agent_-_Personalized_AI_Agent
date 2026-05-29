@@ -262,7 +262,7 @@ MEM_COLLECTION = "mem_vectors"
 
 QDRANT_API_KEY = os.getenv("QDRANT_API_KEY", None)
 QDRANT_URL = os.getenv("QDRANT_URL", None)
-QDRANT_COLLECTION_NAME = os.getenv("QDRANT_COLLECTION_NAME", "nawaloka")
+QDRANT_COLLECTION_NAME = os.getenv("QDRANT_COLLECTION_NAME", "kapruka_product_catalogue")
 
 # ========================================
 # FAQ Loading (optional)

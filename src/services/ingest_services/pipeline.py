@@ -177,9 +177,9 @@ def load_jsonl_docs(jsonl_dir: Path | None = None) -> List[Dict[str, Any]]:
 
 
 LOADER_MAP = {
-    # "kb": load_kb_docs,
-    "markdown": load_markdown_docs,
     "jsonl": load_jsonl_docs,
+    # "kb": load_kb_docs,
+    # "markdown": load_markdown_docs,
 }
 
 
