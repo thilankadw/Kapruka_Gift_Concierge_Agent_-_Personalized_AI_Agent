@@ -1,469 +1,718 @@
-# Kapruka Agent | Stateful Multi-Agent Gift Concierge
+# Kapruka Agent
 
-[![Python](https://img.shields.io/badge/Python-3.10%2B-3776AB?logo=python&logoColor=white)](https://www.python.org/)
-[![FastAPI](https://img.shields.io/badge/FastAPI-Async%20API-009688?logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com/)
-[![LangGraph](https://img.shields.io/badge/LangGraph-Stateful%20Workflows-111111)](https://www.langchain.com/langgraph)
-[![Qdrant](https://img.shields.io/badge/Qdrant-Vector%20Retrieval-DC244C)](https://qdrant.tech/)
-[![Supabase](https://img.shields.io/badge/Supabase-Memory%20%2B%20CRM-3ECF8E?logo=supabase&logoColor=white)](https://supabase.com/)
-[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](#license)
+Stateful multi-agent gift concierge for the Kapruka domain, built to showcase context engineering, retrieval engineering, orchestration, and production-style AI system design.
 
-This repository is not a single-prompt chatbot. It is a stateful, memory-aware, tool-using AI system built to handle personalized gift discovery, CRM-backed customer context, structured logistics validation, and real-time retrieval over a product knowledge base.
+This repository is not a single-prompt demo. It combines:
 
-The core engineering goal was to build an agent that can carry context across sessions, route compound requests across specialist capabilities, and make retrieval decisions that respect both latency and grounding quality. The result is a LangGraph-orchestrated FastAPI service with semantic memory, multi-step tool workflows, CRAG/CAG retrieval, and production-style observability hooks.
+- LangGraph state orchestration
+- structured routing and multi-route fan-out
+- short-term and long-term memory
+- RAG, CAG, and CRAG
+- relational CRM and logistics reasoning
+- Qdrant vector retrieval
+- Supabase + pgvector memory storage
+- FastAPI serving
+- Langfuse tracing and prompt management
 
-## Project Overview
+The core idea is simple: keep deterministic business data in SQL, keep fuzzy semantic knowledge in vector stores, and make the control flow explicit enough to inspect, test, and extend.
 
-`kapruka_agent` is a portfolio-grade applied AI system for the Kapruka domain. It combines:
+## What This Project Demonstrates
 
-- A LangGraph state machine for agent orchestration
-- Multi-route intent classification for compound requests
-- Stateful memory across short-term and long-term stores
-- A Qdrant-backed retrieval layer with CRAG and semantic caching
-- A Supabase-backed CRM and logistics subsystem for deterministic business lookups
-- An async FastAPI serving layer with SSE streaming, health checks, and graph introspection
+### Context engineering
 
-The agent is optimized for questions such as:
+- `memory_context` is built from recent conversation turns before routing or synthesis.
+- `semantic_facts` carries structured long-term memory facts into the graph as `list[dict]`, not as one flattened string.
+- specialist agents receive different prompt frames and different tool outputs.
+- compound requests are decomposed into multiple routes, executed in parallel, then merged into one user-facing answer.
+- prompt templates are externalized through Langfuse prompt management with local fallbacks in code.
 
-- Personalized gift recommendations based on prior preferences
-- Catalog and FAQ retrieval over Kapruka product data
-- Delivery feasibility checks by district, slot, and product type
-- Mixed-intent requests such as "recommend a cake and check if same-day delivery is possible in Kandy"
+### Retrieval engineering
 
-## Key Features
+- product knowledge retrieval is separated from CRM/logistics retrieval.
+- Qdrant is used for the Kapruka product corpus and for the semantic CAG cache.
+- parent-child chunking is the current default ingestion strategy.
+- CRAG expands retrieval only when confidence is low.
+- a dedicated semantic cache short-circuits repeated and paraphrased questions.
 
-- `Stateful orchestration`: LangGraph drives recall, routing, specialist execution, merge, and memory write-back as an explicit workflow instead of hidden prompt logic.
-- `Memory-aware conversation`: the agent recalls recent session turns and semantically relevant long-term user facts before reasoning.
-- `Specialist tool routing`: CRM, RAG, and web search are separated into independent tool paths with a supervisor node deciding when to fan out in parallel.
-- `Structured logistics reasoning`: delivery coverage, slots, courier capacity, product constraints, and historical delivery outcomes are queried from normalized relational tables.
-- `Retrieval quality controls`: Qdrant retrieval is wrapped with CRAG confidence gating and a semantic CAG layer for repeated or paraphrased questions.
-- `Latency-aware design`: common questions can terminate at the semantic cache, while low-confidence retrieval selectively pays the cost of broader search.
-- `Production-style API surface`: typed request/response schemas, streaming responses, health/readiness checks, and graph topology inspection are exposed over FastAPI.
-- `Observability-first instrumentation`: Langfuse decorators and span updates capture routing, memory recall, retrieval, tool latency, and token usage.
-- `Knowledge-base engineering`: the repo includes crawling, structured extraction, chunking experiments, ingestion scripts, and seeded FAQ cache warmup.
+### Systems engineering
 
-## System Architecture
+- FastAPI lifespan builds the agent once at startup.
+- async endpoints use `ainvoke()` / `astream()` so the event loop stays non-blocking.
+- state transitions are explicit in a LangGraph `StateGraph`.
+- traces, token usage, latency, and prompt versions are observable through Langfuse.
+- storage is externalized: Supabase for memory and CRM, Qdrant for vectors, Tavily for time-sensitive web search.
+
+### Product and domain engineering
+
+- the repo models real Kapruka concerns: catalog retrieval, delivery feasibility, courier availability, slot capacity, product delivery rules, and customer memory.
+- structured logistics data is normalized instead of buried inside prompts.
+- the router includes post-processing heuristics to recover common delivery/logistics misroutes.
+
+## Architecture
 
 ```mermaid
 flowchart LR
-    U[Client / Frontend] --> API[FastAPI API Layer]
-    API --> LG[LangGraph Orchestrator]
+    C[Client] --> API[FastAPI]
+    API --> G[LangGraph Orchestrator]
 
-    LG --> R1[Recall Node]
-    R1 --> SUP[Supervisor / Router]
+    G --> R[recall]
+    R --> S[supervisor]
 
-    SUP --> CRM[CRM Agent]
-    SUP --> RAG[RAG Agent]
-    SUP --> WEB[Concierge / Web Agent]
+    S --> P[profile_agent]
+    S --> K[catalog_agent]
+    S --> Q[concierge_agent]
 
-    CRM --> MERGE[Merge Responses]
-    RAG --> MERGE
-    WEB --> MERGE
-    MERGE --> SAVE[Store & Distill Memory]
+    P --> M[merge_responses]
+    K --> M
+    Q --> M
+    M --> W[save_memory]
 
-    R1 --> STM[Short-Term Memory<br/>Supabase st_turns]
-    R1 --> LTM[Long-Term Memory<br/>Supabase mem_facts]
+    R --> ST[st_turns<br/>Supabase]
+    R --> LT[mem_facts<br/>Supabase + pgvector]
 
-    CRM --> CRMDB[Supabase CRM + Logistics Tables]
-    RAG --> QDRANT[Qdrant KB + CAG Cache]
-    WEB --> TAVILY[Tavily Web Search]
+    P --> CRM[users + logistics tables]
+    K --> KB[Qdrant product KB]
+    K --> CACHE[Qdrant cag_cache]
+    Q --> WEB[Tavily]
 
-    INGEST[Crawl / Chunk / Embed / Upsert Pipeline] --> QDRANT
-    OBS[Langfuse Observability] -. traces .-> LG
-    OBS -. traces .-> CRM
-    OBS -. traces .-> RAG
-    OBS -. traces .-> WEB
+    INGEST[JSONL / Markdown / Crawl pipeline] --> KB
+    OBS[Langfuse] -. traces .-> G
 ```
 
-### Why this architecture
+## LangGraph Workflow
 
-- `LangGraph over ad-hoc chains`: the workflow is explicit, inspectable, and testable. This matters once an agent needs branching, merge behavior, and state mutation across multiple reasoning steps.
-- `Relational CRM + vector retrieval`: deterministic customer/logistics data belongs in SQL; fuzzy product discovery and memory recall belong in vector search. Mixing both into one store would make either precision or flexibility worse.
-- `Separate memory from CRM`: stable profile data and volatile conversational memory age differently, require different retrieval semantics, and should not share the same lifecycle policy.
-- `Separate CAG cache from the product KB`: cache entries are query-answer artifacts, not source knowledge. Isolating them in a dedicated collection avoids polluting the retrieval corpus.
+The orchestrator in `src/agents/orchestrator.py` compiles this graph:
 
-## AI Engineering Concepts Implemented
+1. `recall`
+   Loads short-term turns from `st_turns` and long-term facts from `mem_facts`.
+2. `supervisor`
+   Calls the LLM router, serializes route decisions into graph state, and decides whether to fan out.
+3. `profile_agent`
+   Handles CRM and logistics requests through `CRMTool`.
+4. `catalog_agent`
+   Handles product/catalog/internal FAQ retrieval through `RAGTool`.
+5. `concierge_agent`
+   Handles direct concierge turns and web search turns.
+6. `merge_responses`
+   Merges parallel specialist outputs when the router emitted multiple routes.
+7. `save_memory`
+   Stores the conversation pair in short-term memory and optionally distills durable facts into long-term memory.
 
-### Implemented directly in this codebase
+### Route map
 
-- Stateful AI agents
-- Agent orchestration with LangGraph
-- Context engineering
-- Short-term and long-term memory
-- Episodic memory stores
-- Retrieval-Augmented Generation (RAG)
-- Corrective RAG (CRAG)
-- Cache-Augmented Generation (CAG)
-- Multiple chunking strategies
-- Embedding pipelines
-- Vector databases with Qdrant and pgvector
-- Latency optimization through semantic caching and selective corrective retrieval
-- Tool calling
-- Multi-step reasoning
-- Async API processing and SSE streaming
-- Workflow orchestration
-- Prompt engineering
-- Structured outputs for routing and memory distillation
-- Observability and monitoring with Langfuse
-- FastAPI backend architecture
-- Production-grade API design
-- Inference serving
-- Data ingestion pipelines
-- Knowledge base engineering
-- Memory-aware conversations
-- Fault-tolerant agent workflows
-- Human-like conversational orchestration through specialist synthesis
+| Route | Node | Purpose |
+| --- | --- | --- |
+| `crm` | `profile_agent` | customer profile lookups and structured logistics checks |
+| `rag` | `catalog_agent` | Kapruka product retrieval, recommendations, internal FAQ |
+| `web_search` | `concierge_agent` | live external information such as weather or disruptions |
+| `direct` | `concierge_agent` | greetings, memory-only turns, general concierge replies |
 
-<!-- ### Architectural extensions the current design is intentionally ready for
+### State design
 
-- Hybrid retrieval with sparse + dense reranking
-- MLflow-based experiment tracking and offline evaluation
-- Dockerized deployment
-- AWS ECS deployment
-- Kafka-backed ingestion and background processing
-- Redis for exact-key hot cache, rate limiting, and ephemeral session acceleration
-- Queue-based worker execution for heavy retrieval or ingestion jobs
-- Broader evaluation pipelines beyond the current regression tests
+The shared `AgentState` in `src/agents/state.py` is a meaningful part of the system design:
 
-Those items are not claimed as fully implemented in this repository today. They are the next productionization layer the current boundaries were designed to support. -->
+- `messages`
+  LangGraph message list with `add_messages` reducer.
+- `user_id`, `session_id`
+  stable identifiers passed through every node.
+- `memory_context`
+  formatted short-term context.
+- `semantic_facts`
+  structured long-term facts for specialist prompts.
+- `route_decision`, `route_decisions`
+  backward-compatible single route plus full multi-route list.
+- `tool_output`, `final_answer`
+  raw tool output and synthesized answer.
+- `agent_outputs`
+  reducer-backed collector used to merge parallel branch outputs.
+- `should_distill`
+  write-path signal from the memory node.
 
-## Agent Workflow
+That state model is what turns the graph from "tool calling" into explicit context engineering.
 
-The agent workflow is explicit and stateful:
+## Router Design
 
-1. `recall`: load recent conversation turns from `st_turns` and semantically relevant user facts from `mem_facts`.
-2. `supervisor`: classify the message into one or more routes using structured JSON output.
-3. `fan-out`: route to CRM, RAG, or live web search depending on the request.
-4. `specialist execution`: each agent runs with role-specific prompts and tool outputs.
-5. `merge_responses`: if the request contained multiple intents, merge specialist results into a single coherent answer.
-6. `save_memory`: persist the new turn pair and optionally distill durable facts into long-term memory.
+The router in `src/agents/router.py` does more than intent classification.
 
-This design matters because mixed-intent user messages are common in real conversational systems. Instead of collapsing everything into a single brittle prompt, the graph makes routing and merge behavior first-class.
+### What it does
 
-## Memory Architecture
+- asks the LLM for strict JSON output
+- supports up to 3 routes for one user message
+- validates routes and CRM actions
+- deduplicates repeated routes
+- extracts parameters for CRM/RAG/web actions
+- repairs common delivery-feasibility misroutes after parsing
 
-The memory layer is split by function and retrieval semantics:
+### Why that matters
 
-- `Short-term memory`: `st_turns` in Supabase stores recent turns per `user_id` and `session_id`, with TTL and ring-buffer trimming.
-- `Long-term semantic memory`: `mem_facts` stores distilled user facts with embeddings, scores, tags, decay signals, soft deletion, and pgvector retrieval.
-- `Episodic memory`: `mem_episodes` stores summarized past sessions for broader narrative recall.
-<!-- - `Procedural memory`: `mem_procedures` stores reusable workflows as semantically searchable operating knowledge. -->
+Real user messages are often compound:
 
-### Why these decisions were made
+- "Find a birthday cake under Rs. 5000 and check if same-day delivery is available in Kandy."
+- "Update my phone number and recommend chocolates."
 
-- `ST memory uses TTL + max-turn trimming` because conversational continuity matters only within a bounded time window, and prompt inflation is a real latency and cost risk.
-- `LT memory is semantic, not transcript-based` because persistent user preferences should be retrievable by meaning, not by exact wording.
-- `Memory facts are distilled, scored, and deduplicated` because raw turn storage alone leads to noisy recall and repetitive prompt injection.
-- `Recall uses a 60/40 short-term vs long-term token split within a 500-token budget` because immediate conversational continuity usually has higher utility than distant profile context in customer-facing answers.
-- `Long-term similarity threshold is intentionally permissive at 0.30` because missing a relevant preference is typically more damaging than pulling in one slightly noisy fact.
+Instead of forcing one brittle prompt to solve everything, the router emits structured work items and the graph fans out.
 
-## Retrieval Pipeline
+### Logistics rerouting heuristic
 
-The retrieval subsystem is designed around precision, grounding quality, and latency control.
+One of the more practical engineering decisions in this repo is the router post-processor:
 
-### End-to-end flow
+- delivery-feasibility questions that an LLM may label as `web_search` or `direct` are corrected toward CRM/logistics actions when the query looks like a structured district/slot/product coverage request.
+- live disruption queries still stay on the web-search path.
 
-1. Crawl source documents from Kapruka product pages and JSONL/Markdown assets.
-2. Chunk content using fixed-chunking strategy.
-3. Generate embeddings in batches.
-4. Upsert chunks into Qdrant with metadata payloads.
-5. Retrieve with a Qdrant-backed LangChain retriever.
-6. Apply CRAG confidence checks.
-7. Short-circuit repeated questions through the semantic CAG cache.
+The regression tests in `tests/test_logistics_flow.py` exist specifically to protect that behavior.
 
-### Chunking strategies in the repo
+## Memory System
 
-- `semantic`: heading-aware chunking for structure-preserving splits
-- `fixed`: uniform windows for predictable chunk sizes
-- `sliding`: overlapping windows for recall coverage
-- `parent_child`: fine-grained retrieval with richer parent context
-- `late_chunk`: large base passages with query-time splitting support
+The memory subsystem lives in `src/memory/`.
 
-### Why fixed chunking is the default
+### What is actively used on the main chat path
 
-I defaulted the ingestion pipeline to `fixed` chunking because the corpus is dominated by product data with relatively consistent structure. Most documents contain the same retrieval-relevant fields such as product name, price, availability, delivery notes, and short descriptions, so predictable chunk boundaries were more useful than hierarchical chunking.
+#### Short-term memory
 
-For this dataset, the priority was operational simplicity and retrieval consistency:
+- store: `st_turns`
+- implementation: `src/memory/st_store.py`
+- backend: Supabase PostgreSQL
+- behavior:
+  - TTL-backed conversation storage
+  - ring-buffer trimming
+  - session-scoped recent-turn recall
+- current defaults from `src/infrastructure/config.py`:
+  - max turns: `30`
+  - TTL: `24h`
 
-- fixed chunks keep embedding sizes uniform, which makes indexing behavior easier to reason about
-- the product pages are short enough that aggressive hierarchical splitting would add complexity faster than it would improve retrieval quality
-- repeated product-field patterns make semantic boundary preservation less critical than it would be for long-form documentation or mixed-content knowledge bases
+#### Long-term semantic memory
 
-The current defaults reflect that tradeoff:
+- store: `mem_facts`
+- implementation: `src/memory/lt_store.py`
+- backend: Supabase PostgreSQL + pgvector
+- behavior:
+  - semantic retrieval by embedding similarity
+  - score decay
+  - soft deletion
+  - cross-run semantic deduplication
+- current defaults:
+  - top-k: `5`
+  - similarity threshold: `0.30`
+  - TTL horizon: `90 days`
+  - half-life: `30 days`
+  - cross-run dedup similarity: `0.92`
 
-- `fixed_chunk_size=300`: small enough to keep product attributes tightly grouped without overloading the prompt with irrelevant neighboring text.
-- `fixed_chunk_overlap=0`: appropriate because most product records are already compact and structurally repetitive, so overlap would increase duplication more than recall.
-- `top_k=4`: keeps prompts lean for normal retrieval paths.
-- `expanded_k=8` under CRAG: broadens recall only when the initial retrieval confidence is low.
-- `cag_similarity_threshold=0.90`: high enough to avoid accidental cache collisions while still catching close paraphrases.
+### Distillation path
 
-### RAG / CRAG / CAG behavior
+`src/memory/memory_ops.py` contains:
 
-- `RAG`: standard dense retrieval over Qdrant.
-- `CRAG`: calculates retrieval confidence from keyword overlap, content richness, and strategy diversity; if confidence is low, it expands retrieval before generation.
-- `CAG`: stores query-answer pairs in a dedicated semantic cache collection so semantically similar questions can be answered without re-running the full retrieval pipeline.
+- `MemoryDistiller`
+  - triggers when the conversation is long enough or contains memory-like phrases such as `remember`, `always`, or `never`
+  - uses an LLM to extract durable facts
+  - scores facts
+  - deduplicates within-batch
+  - upserts to long-term memory
+- `MemoryRecaller`
+  - retrieves ST + LT memory
+  - applies a token budget
+  - currently uses a 60/40 short-term vs long-term budget split within a 500-token recall window
 
-## Tech Stack
+### Additional memory layers present in the repo
 
-- `Python 3.10+`
-- `FastAPI` + `Uvicorn`
-- `LangGraph` for stateful workflows
-- `LangChain Core` + LCEL
-- `OpenAI / OpenRouter-compatible models`
-- `Qdrant Cloud` for product retrieval and semantic cache
-- `Supabase PostgreSQL` + `pgvector` for memory and CRM state
-- `SQLAlchemy` for relational access
-- `Playwright` + `BeautifulSoup` + `markdownify` for crawling and content extraction
-- `Langfuse` for tracing, latency, and token observability
-- `Pydantic` for typed API contracts
-- `Pytest` for regression coverage
+These exist and are implemented, but they are not on the default orchestration path today:
 
-## Infrastructure & Deployment
+- `mem_episodes`
+  - `src/memory/episodic_store.py`
+  - stores summarized conversation episodes with pgvector summaries.
+- `mem_procedures`
+  - `src/memory/procedural_store.py`
+  - stores semantically searchable workflows and procedures.
 
-The runtime is already shaped like a deployable service:
+That distinction matters: the repo contains a broader memory architecture than the current default agent runtime actively consumes.
 
-- The API tier is stateless.
-- Durable state lives in external systems: Supabase for relational + memory state, Qdrant for vector retrieval and semantic cache.
-- Startup initialization builds the agent once and keeps tool clients hot.
-- The API exposes health and topology endpoints needed for operational visibility.
+## Retrieval Stack
 
-<!-- From an infrastructure standpoint, this maps cleanly to containerized deployment on ECS or any other managed runtime because the service already follows a twelve-factor pattern: configuration through environment variables, externalized state, and a single HTTP serving process.
+The retrieval path is implemented in `src/services/chat_service/` and `src/agents/tools/rag_tool.py`.
 
-What is not yet committed in this repo:
+### RAG
 
-- `Dockerfile` / `docker-compose.yml`
-- ECS task definitions or IaC
-- Kafka or Redis worker infrastructure
-- MLflow tracking server configuration
+`RAGTool` is the public tool used by the agent for product, catalog, and internal FAQ retrieval.
 
-That absence is deliberate to keep the repository focused on the agent runtime itself. The code boundaries are already compatible with those additions. -->
+Under the hood:
 
-## Project Structure
+1. embed the query
+2. search Qdrant
+3. retrieve parent-child-aware context
+4. build a grounded prompt
+5. synthesize an answer
+
+The retriever in `src/services/chat_service/rag_service.py`:
+
+- is a LangChain-compatible `BaseRetriever`
+- deduplicates by `parent_id`
+- passes `parent_text` as the LLM-facing `page_content`
+- preserves child text and metadata in the payload
+
+### CAG
+
+`CAGCache` in `src/services/chat_service/cag_cache.py` is a semantic cache backed by a dedicated Qdrant collection.
+
+Current behavior:
+
+- collection: `cag_cache`
+- threshold: `0.90`
+- TTL: `24h`
+- lookup: KNN-1 over query embeddings
+- duplicate cleanup on set: near-identical entries above `0.99`
+
+Why this is useful:
+
+- repeated questions return instantly
+- paraphrases can still hit the cache
+- cached answers do not pollute the product corpus because the cache lives in its own collection
+
+### CRAG
+
+`CRAGService` in `src/services/chat_service/crag_service.py` adds a corrective retrieval pass.
+
+Current flow:
+
+1. initial retrieval with `k=4`
+2. confidence scoring
+3. if confidence `< 0.6`, expand retrieval to `k=8`
+4. generate from the better evidence set
+
+Confidence is currently heuristic-based in `src/infrastructure/utils.py`:
+
+- keyword overlap
+- content richness
+- strategy diversity
+
+### End-to-end CAG -> CRAG pipeline
+
+The agent-facing `RAGTool` uses:
+
+`query -> semantic cache -> cache miss -> CRAG -> answer -> cache set`
+
+That gives the system two operating modes:
+
+- low-latency path for repeated/common questions
+- higher-quality corrective path for uncertain retrieval
+
+## Ingestion and Knowledge-Base Engineering
+
+The ingestion pipeline lives in `src/services/ingest_services/`.
+
+### Sources
+
+The repo currently contains two product corpora derived from the Kapruka crawl:
+
+- `data/kapruka_docs.jsonl`
+  - structured product records
+- `data/kapruka_markdown/`
+  - rendered markdown product pages
+
+The current CLI-exposed ingestion source is `jsonl`, via `scripts/ingest_to_qdrant.py`.
+
+### Chunking strategies implemented
+
+`src/services/ingest_services/chunkers.py` implements:
+
+- `semantic_chunk`
+- `fixed_chunk`
+- `sliding_chunk`
+- `parent_child_chunk`
+- `late_chunk_index`
+- `late_chunk_split`
+
+### Current default
+
+The actual current ingestion CLI default is:
+
+- source: `jsonl`
+- strategy: `parent_child`
+
+Relevant config values:
+
+- parent size: `1200`
+- child size: `250`
+- child overlap: `50`
+- retrieval top-k: `4`
+- retrieval similarity threshold: `0.7`
+
+### Why parent-child is a good fit here
+
+The Kapruka dataset is product-centric and fairly compact. Parent-child chunking works well because:
+
+- child chunks improve retrieval precision
+- parent text gives the generator richer context
+- repeated field structures such as price, partner, options, and descriptions stay connected during synthesis
+
+### Crawler
+
+`src/services/ingest_services/web_crawler.py` contains an async Playwright crawler that:
+
+- prioritizes product detail pages
+- extracts product metadata and option values
+- converts crawled HTML into structured content
+- keeps discovery order stable
+- enforces max-depth, max-pages, and max-saved-docs limits
+
+The notebooks show the crawl process that produced the current dataset snapshot.
+
+## CRM and Logistics Layer
+
+The structured business-data path is intentionally relational.
+
+### Tables
+
+The schema generator and SQL snapshot define:
+
+- `users`
+- `delivery_zones`
+- `delivery_slots`
+- `courier_profiles`
+- `product_delivery_rules`
+- `delivery_history`
+- plus memory tables:
+  - `st_turns`
+  - `mem_facts`
+  - `mem_episodes`
+  - `mem_procedures`
+
+### Current structured seed data
+
+From `data/logistics/`:
+
+- `25` delivery zones
+- `125` delivery slots
+- `1000` courier profiles
+- `10` product delivery rule rows
+- `10000` delivery history rows
+
+### Why this matters
+
+Delivery coverage, courier capacity, slot availability, and product constraints are deterministic business queries. They should not be hallucinated from text retrieval.
+
+That is why the CRM/logistics tool path exists separately from product RAG.
+
+### CRM tool actions
+
+`src/agents/tools/crm_tool.py` supports:
+
+- `lookup_user`
+- `create_user`
+- `update_user`
+- `deactivate_user`
+- `list_users`
+- `get_delivery_zone`
+- `list_delivery_slots`
+- `search_couriers`
+- `get_product_delivery_rule`
+- `lookup_delivery_history`
+- `check_delivery_coverage`
+
+`check_delivery_coverage` is especially important because it synthesizes:
+
+- district-level availability
+- same-day feasibility
+- slot availability
+- product delivery rules
+- top available couriers
+- historical delivery summary
+
+## Prompt and Observability Layer
+
+The observability and prompt-ops design lives in:
+
+- `src/infrastructure/observability.py`
+- `src/agents/prompts/agent_prompts.py`
+- `src/memory/prompts.py`
+
+### Langfuse usage
+
+Langfuse is used for:
+
+- tracing graph nodes
+- tracking token usage and latency
+- routing and memory-generation visibility
+- prompt management with live override capability
+
+### Prompt management pattern
+
+Prompts are fetched from Langfuse by name, but every prompt has a local fallback in code.
+
+That gives you:
+
+- editable prompts in Langfuse without code redeploy
+- safe local execution when Langfuse prompts do not exist yet
+- versionable agent behavior across router, synthesis, memory distillation, and specialist prompts
+
+### Observed units
+
+Key traced units include:
+
+- router invocation
+- recall node
+- CRM dispatch
+- RAG search
+- CAG generation
+- web search
+- memory distillation
+- top-level chat request
+
+## API Surface
+
+The FastAPI app lives in `src/api/`.
+
+### Routes
+
+- `POST /chat`
+  Synchronous final-answer endpoint.
+- `POST /chat/stream`
+  SSE stream of node-by-node progress using LangGraph `astream()`.
+- `GET /health`
+  Reports agent readiness and tool availability.
+- `GET /graph`
+  Returns Mermaid and structured edge metadata for the compiled graph.
+- `GET /memory/{user_id}`
+  Returns stored long-term facts for a user.
+- `POST /memory/clear`
+  Clears short-term memory for a session.
+
+### API engineering details
+
+- typed request/response schemas live in `src/api/schemas.py`
+- startup builds the agent once in FastAPI lifespan
+- blocking startup work is moved to `asyncio.to_thread`
+- CORS is open for experimentation
+- streaming summarizes per-node state instead of dumping raw graph internals
+
+## Repository Map
+
+### Top-level
+
+- `pyproject.toml`
+  package metadata and Hatch configuration.
+- `requirements.txt`
+  broader runtime and notebook dependency list.
+- `Makefile`
+  workflow shortcuts for install, schema init, seeding, ingestion, status, and tests.
+- `assets/supabase-schema-hlrsemagjramzknjllnv.png`
+  visual schema reference.
+
+### Config
+
+- `config/param.yaml`
+  retrieval, chunking, cache, crawling, and path defaults.
+- `config/models.yaml`
+  provider/model catalog.
+- `config/faqs.yaml`
+  curated FAQ query/answer pairs used to warm the semantic cache.
+
+### Data
+
+- `data/kapruka_docs.jsonl`
+  structured product corpus for ingestion.
+- `data/kapruka_markdown/*.md`
+  markdown-rendered crawl output.
+- `data/logistics/*.json`
+  structured logistics seed data.
+
+### Source
+
+- `src/agents/`
+  router, state, orchestrator, prompts, tools.
+- `src/api/`
+  FastAPI app and schemas.
+- `src/infrastructure/`
+  config, logging, utils, observability, LLM providers, DB clients.
+- `src/memory/`
+  ST/LT/episodic/procedural memory implementations and policies.
+- `src/services/chat_service/`
+  RAG, CAG, CRAG, cache, and prompt templates.
+- `src/services/ingest_services/`
+  crawler, chunkers, ingestion pipeline.
+- `src/services/crm_service/`
+  CRM DB client and synthetic data generation.
+
+### Scripts
+
+- `scripts/init_supabase.py`
+  initialize Supabase schema.
+- `scripts/test_supabase.py`
+  verify connection and pgvector extension.
+- `scripts/seed_crm_unified.py`
+  seed CRM users plus logistics reference data.
+- `scripts/ingest_to_qdrant.py`
+  ingest the product corpus into Qdrant.
+- `scripts/rebuild_cag_cache.py`
+  clear and warm the semantic FAQ cache from `config/faqs.yaml`.
+
+### SQL
+
+- `sql/supabase_schema.sql`
+  SQL schema snapshot.
+- `src/infrastructure/db/supabase_schema.py`
+  dynamic schema generator used by setup scripts.
+- `sql/01_users.sql`
+  deterministic user seed data.
+- `sql/02_delivery_zones.sql` through `sql/06_delivery_history.sql`
+  logistics seed snapshots.
+
+### Notebooks
+
+- `notebooks/01_crawl_kapruka.ipynb`
+  crawler workflow and crawl export.
+- `notebooks/02_find_chunk_size.ipynb`
+  chunk-size analysis over the product corpus.
+- `notebooks/03_routing_memory_and_tools.ipynb`
+  routing, memory, and tool-path walkthrough.
+- `notebooks/04_multi_agent_langgraph.ipynb`
+  LangGraph visualization and multi-agent demos.
+
+### Tests
+
+- `tests/test_logistics_flow.py`
+  verifies logistics rerouting, CRM feasibility formatting, and end-to-end orchestrator behavior.
+
+## Data and Cache Metrics
+
+Current repository snapshot:
+
+- `96` JSONL product records
+- `96` markdown product documents
+- `40` curated FAQ cache entries
+- `25` delivery zones
+- `125` delivery slots
+- `1000` courier profiles
+- `10` product delivery rules
+- `10000` delivery-history rows
+
+## Quick Start
+
+### 1. Install dependencies
+
+```bash
+pip install -r requirements.txt
+```
+
+### 2. Configure environment
+
+Create a `.env` with the keys your chosen runtime path needs.
+
+Common keys used by this repo:
+
+- `OPENAI_API_KEY`
+- `QDRANT_URL`
+- `QDRANT_API_KEY`
+- `SUPABASE_DB_URL`
+- `SUPABASE_URL`
+- `SUPABASE_KEY`
+- `TAVILY_API_KEY`
+- `LANGFUSE_SECRET_KEY`
+- `LANGFUSE_PUBLIC_KEY`
+- `LANGFUSE_BASE_URL`
+
+### 3. Initialize Supabase schema
+
+```bash
+python scripts/init_supabase.py
+python scripts/test_supabase.py
+```
+
+### 4. Seed CRM and logistics data
+
+```bash
+python scripts/seed_crm_unified.py --mode template --storage database --n-users 20 --tz Asia/Colombo --rand-seed 42
+```
+
+Use `--mode llm` if you want LLM-generated CRM users instead of deterministic templates.
+
+### 5. Ingest the product corpus into Qdrant
+
+```bash
+python scripts/ingest_to_qdrant.py --source jsonl --strategy parent_child
+```
+
+### 6. Warm the semantic FAQ cache
+
+```bash
+python scripts/rebuild_cag_cache.py
+```
+
+### 7. Run the API
+
+```bash
+python src/api/run.py
+```
+
+Docs:
+
+- `http://localhost:8000/docs`
+- `http://localhost:8000/redoc`
+
+## Example Requests
+
+### Product recommendation
 
 ```text
-kapruka_agent/
-├── config/                     # Model, retrieval, chunking, and FAQ configuration
-├── data/                       # Crawled docs, JSONL corpora, logistics seed data
-├── notebooks/                  # Retrieval and orchestration experiments
-├── scripts/                    # Schema init, ingestion, cache rebuild, data seeding
-├── sql/                        # Seed SQL and database schema files
-├── src/
-│   ├── agents/                 # Router, LangGraph orchestrator, prompts, tools
-│   ├── api/                    # FastAPI app and typed schemas
-│   ├── infrastructure/         # Config, DB clients, LLM providers, observability
-│   ├── memory/                 # ST/LT/episodic/procedural memory stores and policies
-│   └── services/               # Ingestion, RAG/CRAG/CAG, CRM services
-└── tests/                      # Regression tests for routing and logistics flows
+I want a birthday gift under Rs. 5000. I prefer chocolates and flowers.
 ```
 
-### Repository design notes
+Expected path:
 
-- `agents/` owns orchestration and decision-making, not storage concerns.
-- `memory/` owns lifecycle policy and retrieval semantics for conversational state.
-- `services/` owns domain workflows such as ingestion and retrieval.
-- `infrastructure/` isolates external systems so the agent logic remains portable.
+- memory recall
+- `rag`
+- optional CAG hit or CRAG correction
+- memory write-back
 
-## Installation
+### Structured logistics check
+
+```text
+Can you check same-day delivery availability in Kandy for a cake?
+```
+
+Expected path:
+
+- router may infer or repair this to `crm/check_delivery_coverage`
+- CRM tool composes coverage + rule + slot + history summary
+
+### Compound query
+
+```text
+Recommend a chocolate gift and also tell me if Kandy has an available delivery slot.
+```
+
+Expected path:
+
+- router emits `rag` and `crm`
+- LangGraph fans out
+- `merge_responses` synthesizes one answer
+
+## Running Tests
 
 ```bash
-python -m venv .venv
-.\.venv\Scripts\Activate.ps1
-pip install -r requirements.txt
-python -m playwright install chromium
+pytest tests/test_logistics_flow.py -v
 ```
 
-Optional development install:
+<!-- ## Honest Snapshot Notes
 
-```bash
-pip install -e ".[dev]"
-```
+This README is intentionally aligned to the current tree, not to an aspirational architecture.
 
-## Environment Variables
+- The repo contains loader helpers for markdown and KB ingestion, but the current ingestion CLI exposes `jsonl` as the active source.
+- Episodic and procedural memory are implemented in the repository, but the default chat path currently uses short-term memory plus long-term semantic facts.
+- `config/models.yaml` contains multi-provider catalogs, but `src/infrastructure/config.py` currently pins runtime role defaults to the OpenAI path.
+- The Makefile captures the intended workflow, but some targets reference helpers that are not present in this snapshot or assume a POSIX-style shell. The direct `python ...` commands above are the reliable path. -->
 
-Create a `.env` file with the following values.
+## Context Engineering Architecture
 
-```env
-# LLMs
-OPENAI_API_KEY=
-OPENROUTER_API_KEY=
-GROQ_API_KEY=
+The project does not treat "context" as one big prompt field.
 
-# Retrieval
-QDRANT_URL=
-QDRANT_API_KEY=
-QDRANT_COLLECTION_NAME=nawaloka
+It treats context as a composed system:
 
-# Supabase
-SUPABASE_URL=
-SUPABASE_ANON_KEY=
-SUPABASE_DB_URL=
+- conversational context with TTL and trimming
+- persistent user facts with semantic recall
+- structured business context from CRM/logistics tables
+- retrieved product context from Qdrant
+- cached answer context from CAG
+- route context for branch execution
+- merged multi-agent context for final synthesis
+- prompt context controlled through Langfuse
 
-# Live web search
-TAVILY_API_KEY=
-
-# Observability
-LANGFUSE_PUBLIC_KEY=
-LANGFUSE_SECRET_KEY=
-LANGFUSE_BASE_URL=https://us.cloud.langfuse.com
-```
-
-### Required vs optional
-
-- `Required for local end-to-end agent usage`: `OPENAI_API_KEY`, `SUPABASE_DB_URL`, `QDRANT_URL`, `QDRANT_API_KEY`
-- `Required for CRM REST compatibility helpers`: `SUPABASE_URL`, `SUPABASE_ANON_KEY`
-- `Required for live web search routes`: `TAVILY_API_KEY`
-- `Optional but recommended`: Langfuse keys for tracing
-
-## Running the Project
-
-### 1. Initialize the database schema
-
-```bash
-PYTHONPATH=src python scripts/init_supabase.py
-```
-
-### 2. Seed CRM and logistics data
-
-```bash
-PYTHONPATH=src python scripts/seed_crm_unified.py --mode template --storage database --n-users 20
-```
-
-### 3. Ingest the product corpus into Qdrant
-
-```bash
-PYTHONPATH=src python scripts/ingest_to_qdrant.py --source jsonl --strategy parent_child
-```
-
-### 4. Optionally warm the semantic FAQ cache
-
-```bash
-PYTHONPATH=src python scripts/rebuild_cag_cache.py
-```
-
-### 5. Start the API
-
-```bash
-cd src
-uvicorn api.main:app --reload --port 8000
-```
-
-Swagger docs: `http://localhost:8000/docs`
-
-## Example Workflow
-
-Example user request:
-
-> "Recommend a chocolate gift for my wife and check whether same-day delivery is possible in Kurunegala?."
-
-What the system does:
-
-1. Recalls recent context and stored user facts.
-2. Routes the message into two paths: `rag` for recommendation and `crm` for delivery feasibility.
-3. Runs both branches in the LangGraph workflow.
-4. Retrieves grounded product context from Qdrant and structured delivery data from Supabase.
-5. Merges both specialist outputs into one natural response.
-6. Stores the new interaction and optionally distills new preference facts.
-
-That fan-out/fan-in behavior is the difference between a prompt wrapper and an actual orchestrated agent.
-
-## API Endpoints
-
-### `POST /chat`
-
-Primary synchronous chat endpoint.
-
-```json
-{
-  "user_message": "Find a birthday cake under Rs. 5000",
-  "user_id": "user-123",
-  "session_id": "session-001"
-}
-```
-
-### `POST /chat/stream`
-
-Streams node-by-node progress over Server-Sent Events using `graph.astream()`.
-
-### `GET /health`
-
-Reports service liveness and whether CRM, RAG, and web search tools were initialized successfully.
-
-### `GET /graph`
-
-Returns the compiled LangGraph topology as Mermaid plus structured nodes/edges. Useful for architecture documentation and debugging.
-
-### `GET /memory/{user_id}`
-
-Inspect a user's stored long-term facts.
-
-### `POST /memory/clear`
-
-Clears short-term session memory while preserving long-term memory facts.
-
-## Engineering Challenges Solved
-
-### 1. Preventing logistics queries from being misrouted
-
-The router can initially classify delivery feasibility questions as `web_search`. The code adds a post-processing layer that detects logistics-shaped queries, infers district and product type, and rewrites them into deterministic CRM actions when structured data is available. This is validated in `tests/test_logistics_flow.py`.
-
-### 2. Preserving personalization without prompt bloat
-
-Memory recall is budgeted, scored, and split across short-term and long-term sources. The goal is to preserve continuity and personalization without turning every response into an expensive full-history replay.
-
-### 3. Balancing retrieval precision, recall, and latency
-
-The retrieval stack does not assume one strategy solves every case. Parent-child chunking improves precision, CRAG expands search only when confidence is low, and CAG avoids redundant retrieval entirely for semantically repeated questions.
-
-### 4. Keeping business data deterministic
-
-Delivery zones, slots, couriers, rules, and historical outcomes live in normalized relational tables. This prevents the agent from hallucinating operational facts that should always come from source-of-truth data.
-
-### 5. Making the workflow observable
-
-Tracing is not bolted on after the fact. Router calls, retrieval, tool dispatch, memory recall, and generation are all instrumented with Langfuse decorators and metadata updates.
-
-## Performance & Optimization
-
-- `Async serving`: `/chat` uses `ainvoke()` and `/chat/stream` uses `astream()` to keep the event loop responsive under concurrent requests.
-- `Non-blocking startup`: expensive synchronous initialization is moved into `asyncio.to_thread(...)`.
-- `Thread-offloaded DB reads/writes`: memory fetch and clear operations avoid blocking the FastAPI event loop.
-- `Semantic cache`: repeated questions can terminate at the CAG layer with no additional generation cost.
-- `Selective corrective retrieval`: CRAG expands only on low-confidence retrieval, not on every request.
-- `Semantic fact deduplication`: long-term memory merges near-duplicate facts at insert time using vector similarity.
-- `IVFFlat tuning`: the pgvector retrieval path increases `ivfflat.probes` to improve recall on smaller datasets.
-- `Prompt budget control`: only a bounded number of recent turns and long-term facts are injected.
-
-## Future Improvements
-
-- Add true `hybrid retrieval` with lexical recall plus dense reranking.
-- Introduce `MLflow` for offline evaluation, model comparison, prompt experiments, and run lineage alongside Langfuse runtime tracing.
-- Add a `Redis` layer for exact-key cache hits, rate limiting, and ephemeral session acceleration.
-- Move ingestion and heavy background tasks behind `Kafka` or a queue worker architecture.
-- Ship `Docker` and `AWS ECS` deployment assets for reproducible production rollout.
-- Add an automated evaluation suite covering recommendation quality, retrieval grounding, tool routing accuracy, and latency regressions.
-- Add human approval checkpoints for sensitive profile updates or operational actions.
-
-## Skills Demonstrated
-
-- Designing stateful, memory-driven AI agents beyond simple chat completion wrappers
-- Building explicit multi-agent workflows with LangGraph fan-out/fan-in execution
-- Combining deterministic business systems with probabilistic LLM reasoning
-- Engineering retrieval systems with chunking strategy tradeoffs, CRAG, and semantic caching
-- Modeling conversational memory with lifecycle policy, scoring, deduplication, and token budgeting
-- Exposing production-style APIs for inference, health, topology, and memory inspection
-- Instrumenting LLM systems for traceability, latency analysis, and debugging
-- Structuring an AI codebase for maintainability, extensibility, and future production deployment
-
-## Screenshots / Architecture Diagrams
-
-Architecture diagrams illustrating the retrieval and orchestration pipeline can be added here. The repository already exposes the workflow topology through `GET /graph`, which makes it straightforward to export Mermaid-based diagrams directly from the running system.
-
-Representative additions for a portfolio version:
-
-- LangGraph topology screenshot from the `/graph` endpoint
-- Retrieval pipeline diagram showing crawl -> chunk -> embed -> Qdrant -> CRAG/CAG
-- Swagger UI screenshot for the FastAPI surface
-- Trace screenshot from Langfuse showing routing, tool calls, and latency spans
-
-## License
-
-MIT
+That is the real engineering value in this codebase: context is modeled, stored, routed, budgeted, traced, and tested.
