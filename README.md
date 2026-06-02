@@ -50,34 +50,7 @@ The core idea is simple: keep deterministic business data in SQL, keep fuzzy sem
 
 ## Architecture
 
-```mermaid
-flowchart LR
-    C[Client] --> API[FastAPI]
-    API --> G[LangGraph Orchestrator]
-
-    G --> R[recall]
-    R --> S[supervisor]
-
-    S --> P[profile_agent]
-    S --> K[catalog_agent]
-    S --> Q[concierge_agent]
-
-    P --> M[merge_responses]
-    K --> M
-    Q --> M
-    M --> W[save_memory]
-
-    R --> ST[st_turns<br/>Supabase]
-    R --> LT[mem_facts<br/>Supabase + pgvector]
-
-    P --> CRM[users + logistics tables]
-    K --> KB[Qdrant product KB]
-    K --> CACHE[Qdrant cag_cache]
-    Q --> WEB[Tavily]
-
-    INGEST[JSONL / Markdown / Crawl pipeline] --> KB
-    OBS[Langfuse] -. traces .-> G
-```
+![Kapruka system architecture](assets/kapruka_system_architecture.png)
 
 ## LangGraph Workflow
 
@@ -355,6 +328,21 @@ The Kapruka dataset is product-centric and fairly compact. Parent-child chunking
 
 The notebooks show the crawl process that produced the current dataset snapshot.
 
+## Database Schema
+
+![Supabase database schema](assets/supabase_schema.png)
+
+The database schema covers both the memory system and the operational CRM/logistics model:
+
+- conversation memory in `st_turns`
+- semantic memory in `mem_facts`
+- episodic memory in `mem_episodes`
+- procedural memory in `mem_procedures`
+- customer identity in `users`
+- delivery planning in `delivery_zones`, `delivery_slots`, and `courier_profiles`
+- product constraints in `product_delivery_rules`
+- historical fulfillment signals in `delivery_history`
+
 ## CRM and Logistics Layer
 
 The structured business-data path is intentionally relational.
@@ -456,6 +444,46 @@ Key traced units include:
 - memory distillation
 - top-level chat request
 
+## Demo Screenshots
+
+### Chat flow
+
+The screenshots below show a single end-to-end concierge flow moving from gift discovery to delivery confirmation.
+
+#### Initial recommendation and follow-up refinement
+
+| Initial gift recommendation | Follow-up recommendations |
+| --- | --- |
+| ![Initial chat recommendation](<assets/chat/Screenshot 2026-06-02 203520.png>) | ![Chat follow-up recommendations](<assets/chat/Screenshot 2026-06-02 203547.png>) |
+
+#### Product narrowing and price confirmation
+
+| Additional cake options | Confirmed item pricing |
+| --- | --- |
+| ![Additional cake options in chat](<assets/chat/Screenshot 2026-06-02 203605.png>) | ![Confirmed item pricing in chat](<assets/chat/Screenshot 2026-06-02 203627.png>) |
+
+#### Delivery feasibility and slot selection
+
+| Delivery coverage check | Delivery slot selection |
+| --- | --- |
+| ![Delivery coverage check in chat](<assets/chat/Screenshot 2026-06-02 203649.png>) | ![Delivery slot selection in chat](<assets/chat/Screenshot 2026-06-02 203703.png>) |
+
+### Langfuse observability
+
+These screenshots show the tracing, cost, and prompt-management views wired into the agent runtime.
+
+#### Overview and cost dashboard
+
+| Langfuse home overview | Langfuse cost dashboard |
+| --- | --- |
+| ![Langfuse home overview](<assets/langfuse/Screenshot 2026-06-02 205815.png>) | ![Langfuse cost dashboard](<assets/langfuse/Screenshot 2026-06-02 205847.png>) |
+
+#### Trace inspection and prompt management
+
+| Langfuse tracing view | Langfuse prompt management |
+| --- | --- |
+| ![Langfuse tracing view](<assets/langfuse/Screenshot 2026-06-02 205921.png>) | ![Langfuse prompt management](<assets/langfuse/Screenshot 2026-06-02 205946.png>) |
+
 ## API Surface
 
 The FastAPI app lives in `src/api/`.
@@ -493,8 +521,10 @@ The FastAPI app lives in `src/api/`.
   broader runtime and notebook dependency list.
 - `Makefile`
   workflow shortcuts for install, schema init, seeding, ingestion, status, and tests.
-- `assets/supabase-schema-hlrsemagjramzknjllnv.png`
-  visual schema reference.
+- `assets/kapruka_system_architecture.png`
+  system architecture diagram.
+- `assets/supabase_schema.png`
+  Supabase schema reference.
 
 ### Config
 
