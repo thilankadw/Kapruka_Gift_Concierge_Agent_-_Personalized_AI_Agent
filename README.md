@@ -444,6 +444,46 @@ Key traced units include:
 - memory distillation
 - top-level chat request
 
+## Demo Screenshots
+
+### Chat flow
+
+The screenshots below show a single end-to-end concierge flow moving from gift discovery to delivery confirmation.
+
+#### Initial recommendation and follow-up refinement
+
+| Initial gift recommendation | Follow-up recommendations |
+| --- | --- |
+| ![Initial chat recommendation](<assets/chat/Screenshot 2026-06-02 203520.png>) | ![Chat follow-up recommendations](<assets/chat/Screenshot 2026-06-02 203547.png>) |
+
+#### Product narrowing and price confirmation
+
+| Additional cake options | Confirmed item pricing |
+| --- | --- |
+| ![Additional cake options in chat](<assets/chat/Screenshot 2026-06-02 203605.png>) | ![Confirmed item pricing in chat](<assets/chat/Screenshot 2026-06-02 203627.png>) |
+
+#### Delivery feasibility and slot selection
+
+| Delivery coverage check | Delivery slot selection |
+| --- | --- |
+| ![Delivery coverage check in chat](<assets/chat/Screenshot 2026-06-02 203649.png>) | ![Delivery slot selection in chat](<assets/chat/Screenshot 2026-06-02 203703.png>) |
+
+### Langfuse observability
+
+These screenshots show the tracing, cost, and prompt-management views wired into the agent runtime.
+
+#### Overview and cost dashboard
+
+| Langfuse home overview | Langfuse cost dashboard |
+| --- | --- |
+| ![Langfuse home overview](<assets/langfuse/Screenshot 2026-06-02 205815.png>) | ![Langfuse cost dashboard](<assets/langfuse/Screenshot 2026-06-02 205847.png>) |
+
+#### Trace inspection and prompt management
+
+| Langfuse tracing view | Langfuse prompt management |
+| --- | --- |
+| ![Langfuse tracing view](<assets/langfuse/Screenshot 2026-06-02 205921.png>) | ![Langfuse prompt management](<assets/langfuse/Screenshot 2026-06-02 205946.png>) |
+
 ## API Surface
 
 The FastAPI app lives in `src/api/`.
